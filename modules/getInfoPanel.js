@@ -11,7 +11,7 @@ export function getInfoPanel(bmSteamData, bmData, rustPremium) {
         if (arrow.classList.contains("closed")) {
             body.style.height = "0px";
         } else {
-            body.style.height = "26 0px";
+            body.style.height = "260px";
         }
     })
     element.appendChild(header);
@@ -21,7 +21,7 @@ export function getInfoPanel(bmSteamData, bmData, rustPremium) {
     img.id = "bme-info-panel-arrow";
     header.appendChild(img);
 
-    const title = document.createElement("h2")
+    const title = document.createElement("h2");
     title.innerText = "BM Information";
     header.appendChild(title);
 
