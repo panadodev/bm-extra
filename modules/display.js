@@ -1,9 +1,8 @@
 import { getTimeString } from "./getInfoPanel.js";
-import { checkIfAlright, getIdentifierTable, getMain, getRconElement, getStreamerModeName } from "./misc.js";
-
+import { checkIfAlright, getElementWhenAppears, getLastServer, getStreamerModeName, setNativeValue } from "./misc.js";
 
 export async function displaySettingsButton(bmId) {
-    const rconElement = await getRconElement();
+    const rconElement = await getElementWhenAppears("RCONPlayerPage");
 
     const title = rconElement?.firstChild;
     if (!title) return console.error("BM-EXTRA: Failed to locate title.")
@@ -21,13 +20,7 @@ export async function displaySettingsButton(bmId) {
 }
 
 export async function displayAlertLink(bmId) {
-    const container = await getRconElement();
-    let navbar = null;
-    for (const element of Array.from(container.parentNode.parentNode.children)) {
-        if (element.classList.contains("bme-sidebar") || element.classList.contains("main")) continue;
-        navbar = Array.from(element.lastChild.children);
-        break;
-    }
+    const navbar = (await getElementWhenAppears("container", true))?.children[1]?.children;    
     if (!navbar) return console.error(`BM-EXTRA: Failed to locate navbar!`);    
     for (const navElement of navbar) {
         if (navElement.innerText.trim() !== "Ban Player") continue
@@ -66,7 +59,7 @@ export async function displayServerActivity(bmId, bmProfile) {
 
     const onlineServers = servers.filter(server => server.online);
 
-    const rconElement = await getRconElement();
+    const rconElement = await getElementWhenAppears("RCONPlayerPage");
     const title = rconElement?.firstChild;
     if (!title) return console.error("BM-EXTRA: Failed to setup serverElement.")
     const serverElement = getCurrentServersElement(onlineServers.length ? onlineServers : [servers[0]]);
@@ -121,7 +114,7 @@ export async function displayInfoPanel(bmId, bmProfile, steamData, bmActivity, r
     const bmSteamData = getSteamData(steamIdObject, steamData);
     const bmData = getBmData(bmId, bmProfile, bmActivity);
 
-    const rconElement = await getRconElement();
+    const rconElement = await getElementWhenAppears("RCONPlayerPage");
     const allTheDivs = rconElement.lastChild.firstChild;
     let identifierDiv;
     for (const div of allTheDivs.childNodes) {
@@ -251,7 +244,12 @@ export async function displayAvatar(bmId, bmProfile, bmSteamData) {
     }
     if (!avatarUrl) return;
 
-    const mainElement = await getMain();
+    const mainElement = await getElementWhenAppears("main", true);
+
+    //if overview page, wait till RCON element appears, last stage of page load
+    if (location.href.split("/").length === 6)
+        await getElementWhenAppears("RCONPlayerPage");
+
     const title = mainElement?.firstChild?.firstChild;
     if (!title) return;
 
@@ -265,15 +263,9 @@ export async function displayAvatar(bmId, bmProfile, bmSteamData) {
 }
 
 export async function removeSteamInformation(bmId) {
-    const link = document.getElementsByClassName("links");
-    let count = 0;
-    while (!link[0] && count < 100) {
-        count++;
-        await new Promise(r => { setTimeout(r, 10 + (count * 3)); })
-    }
-    if (!link[0]) return console.error(`BM-EXTRA: Failed to locate link. Couldn't remove steamInfo.`);
+    const link = await getElementWhenAppears("links", true);
 
-    let parent = link[0].parentNode;
+    let parent = link.parentNode;
     while (parent) {
         const title = parent.firstChild?.firstChild?.innerText?.trim();
         if (title === "Steam Information") return parent.remove();
@@ -285,7 +277,7 @@ export async function removeSteamInformation(bmId) {
 }
 
 export async function closeAdminLog(bmId) {
-    const rconElement = await getRconElement();
+    const rconElement = await getElementWhenAppears("RCONPlayerPage");
     const divs = rconElement?.lastChild?.firstChild?.childNodes;
 
     for (const div of divs) {
@@ -294,7 +286,6 @@ export async function closeAdminLog(bmId) {
 
         div.firstChild.click();
     }
-
 }
 
 export async function swapBattleEyeGuid(bmId, bmProfile) {
@@ -307,7 +298,8 @@ export async function swapBattleEyeGuid(bmId, bmProfile) {
     const smName = getStreamerModeName(steamId);
     if (!smName) return console.error("BM-EXTRA: Failed to get Streamer Mode name")
 
-    const identifierTable = await getIdentifierTable();
+    const identifierWrapper = (await getElementWhenAppears("css-11gv980", true));
+    const identifierTable = identifierWrapper?.lastChild?.children;
     if (!identifierTable) return console.error("BM-EXTRA: identifierTable is missing!")
 
     for (const identifier of identifierTable) {
@@ -332,7 +324,8 @@ export async function swapBattleEyeGuid(bmId, bmProfile) {
 }
 
 export async function limitItem(bmId, limit, item) {
-    const identifierTable = await getIdentifierTable();
+    const identifierWrapper = (await getElementWhenAppears("css-11gv980", true));
+    const identifierTable = identifierWrapper?.lastChild?.children;
     if (!identifierTable) return console.error("BM-EXTRA: identifierTable is missing!")
 
     let count = 0;
@@ -350,9 +343,9 @@ export async function limitItem(bmId, limit, item) {
 export async function advancedBans(bmId, banDataP) {
     const banData = await banDataP
 
-
-    const rconElement = await getRconElement();
-    const sections = rconElement?.lastChild.firstChild.childNodes;
+    const rconElement = await getElementWhenAppears("RCONPlayerPage");
+    const sections = rconElement?.lastChild?.firstChild?.childNodes;
+    if (!sections) console.error("BM-EXTRA: Failed to find sections.");
 
     let banSection = null;
     for (const section of sections) {
@@ -407,22 +400,26 @@ export async function showExtraDataOnIps(bmId, bmProfile) {
     bmProfile = await bmProfile;
     const ips = bmProfile.included
         .filter(item => item.attributes.type === "ip")
-        .map(item => {
+        .map(item => {            
             const conInfo = item.attributes?.metadata?.connectionInfo;
-            const isp = Boolean(conInfo.isp) ? conInfo.isp : null;
-            const asn = Boolean(conInfo.asn) ? conInfo.asn : null;
+            const isp = Boolean(conInfo?.isp) ? conInfo.isp : null;
+            const asn = Boolean(conInfo?.asn) ? conInfo.asn : null;
+            const lastSeen = item?.attributes?.lastSeen ? new Date(item.attributes.lastSeen).getTime() : 0;
             return {
                 id: item.id ?? null,
                 ip: item.attributes?.identifier ?? null,
-                isp, asn
+                isp, asn, lastSeen
             }
         });
-    //15 is the minimum length, in case there would be no IP
+        
     const longestIp = Math.max(...ips.filter(ip => ip.ip).map(ip => ip.ip.length), 15);
     const longestIsp = Math.max(...ips.filter(ip => ip.isp).map(ip => ip.isp.length));
     const longestAsn = Math.max(...ips.filter(ip => ip.asn).map(ip => ip.asn.length));
 
-    const identifierTable = await getIdentifierTable();
+    const identifierWrapper = (await getElementWhenAppears("css-11gv980", true));
+    const identifierTable = identifierWrapper?.lastChild?.children;
+    if (!identifierTable) console.error("BM-EXTRA: Failed to find identifier table.");
+    
 
     for (const identifier of identifierTable) {
         const { type, id } = getIdentifierType(identifier);
@@ -438,7 +435,7 @@ export async function showExtraDataOnIps(bmId, bmProfile) {
         const ispValue = `${ipObject.isp}`.padEnd(longestIsp);
         const asnValue = `${ipObject.asn}`.padEnd(longestAsn);
 
-        const text = `${ipValue}    |    ISP: ${ispValue}    |    ASN: ${asnValue}`;
+        const text = `${ipValue}  |  ISP: ${ispValue}  |  ${asnValue}`;
         ipElement.innerText = text;
 
     }
@@ -447,7 +444,9 @@ export async function showExtraDataOnIps(bmId, bmProfile) {
 }
 
 export async function highlightVpnIdentifiers(bmId, vpnSettings) {
-    const identifierTable = await getIdentifierTable();
+    const identifierWrapper = (await getElementWhenAppears("css-11gv980", true));
+    const identifierTable = identifierWrapper?.lastChild?.children;
+    if (!identifierTable) console.error("BM-EXTRA: Failed to find identifier table.");
 
     for (const identifier of identifierTable) {
         const { type, id } = getIdentifierType(identifier);
@@ -492,7 +491,8 @@ function makeItVpn(identifier, vpnSettings) {
 export async function displayAvatars(bmId, avatars, zoomable) {
     avatars = await avatars;
 
-    const identifierTable = await getIdentifierTable();
+    const identifierWrapper = (await getElementWhenAppears("css-11gv980", true));
+    const identifierTable = identifierWrapper?.lastChild?.children;
     if (!identifierTable) return console.error("BM-EXTRA: Failed to find identifierTable!");
     const nameElement = Array.from(identifierTable).find(item => item?.innerText?.trim() === "Name");
     if (!nameElement) return console.error("BM-EXTRA: Failed to locate nameElement!");
@@ -546,6 +546,28 @@ function getAvatarElement(item, zoomable) {
     `;
 
     return tr;
+}
+
+export async function selectLastServer(bmId, bmProfile) {
+    bmProfile = await bmProfile;    
+
+    const lastServer = await getLastServer(bmProfile, true);
+    const form = await getElementWhenAppears("ban-form", true)
+    const formHeader = Array.from(form.children[0].children);
+
+    let servers = null;
+    for (const element of formHeader) {
+        if (element.children.length !== 1) continue;
+        const child = element.children[0];
+        if (!child || child.nodeName !== "SELECT") continue;
+        
+        servers = child;
+        break;
+    }
+    if (!servers) return console.error("BM-EXTRA: Failed to find servers!");
+    
+    const target = String(lastServer.id);
+    setNativeValue(servers, target, true);
 }
 
 function getSteamIdObject(array) {

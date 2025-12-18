@@ -21,16 +21,20 @@
     width: 30px;
     height: 30px;
     transition: 0.2 all;
-    border-radius: 5px;
+    border-radius: 0px;
     cursor: pointer;
+    transform: scale(1);
+    transition: 75ms ease-in;
 }
 
 #bme-server-panel img:hover {
-    background: #ffffff20;
+    border-radius: 5px;
+    background: #ffffff10;
 }
 
 #bme-server-panel img:active {
-    background: #9c9c9c60;
+    background: #9c9c9c40;
+    transform: scale(1.1);
 }
 
 .offline p {
@@ -186,11 +190,12 @@
     z-index: 10000;
 }
 
-.bme-alert-element{
+.bme-alert-element {
     height: 34px;
     background: transparent;
 }
-.bme-alert-element > a {
+
+.bme-alert-element>a {
     height: 34px;
     padding: 0px 10px;
     margin: 0px 3px;
@@ -202,28 +207,42 @@
 
     border-radius: 2px;
     text-decoration: none;
-    
+
     opacity: 0.5;
     transition: 75ms;
 }
+
 .bme-alert-element p {
     margin: 0;
     padding: 0;
     text-decoration: none;
     color: #ffffff;
 }
+
 .bme-alert-element a:hover {
     background: #ffffff10;
     text-decoration: none;
     opacity: 0.85;
 }
+
 .bme-alert-element a:active {
     text-decoration: none;
     opacity: 1;
 }
+
 .bme-alert-element a:focus {
     text-decoration: none;
 }
+
+.bme-green-change {
+    border-color: #55ff55 !important;
+    background-color: #55ff5540 !important;
+}
+.bme-red-change {
+    border-color: #ff5555 !important;
+    background-color: #ff555540 !important;
+}
+
 
 
 

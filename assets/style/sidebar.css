@@ -225,6 +225,7 @@ body {
 .bme-team-header-wrapper>h1,
 .bme-team-header-wrapper>h2,
 .player-details>p,
+.player-details>a,
 .bme-team-header p {
     white-space: nowrap;
     overflow: hidden;
@@ -356,6 +357,7 @@ body {
 .bme-comparator-wrapper>input:hover {
     background: #ffffff15;
 }
+
 .bme-comparator-wrapper>input:active,
 .bme-comparator-wrapper>input:focus {
     background: #ffffff20;
@@ -388,4 +390,41 @@ body {
 
 .player-online {
     border-color: var(--online-color);
+}
+
+.bme-sidebar-preset-body {
+    padding: 10px 0px;
+
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: center;
+}
+
+.bme-sidebar-preset-button {
+    width: 290px;
+
+    font-size: 16px;
+    font-weight: 600;
+
+    color: var(--border-color);
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+
+    border-radius: 6px;
+
+    transform: scale(0.97);
+
+    padding: 8px;
+    transition: 75ms;
+    user-select: none;
+}
+
+.bme-sidebar-preset-button:hover {
+    transform: scale(1);
+}
+
+.bme-sidebar-preset-button:active {
+    transform: scale(1.03);
+    filter: brightness(130%);
 }

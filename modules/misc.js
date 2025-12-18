@@ -1,130 +1,29 @@
-const IDENTIFIER_TABLE_CLASS_NAME = "css-11gv980";
-const MAIN_ELEMENT_CLASS_NAME = "main";
-const RCON_PLAYER_PAGE_ID = "RCONPlayerPage";
-export function getAuthToken() {
-    const authElement = document.getElementById("oauthToken");
-    if (!authElement) {
-        console.error("BM-EXTRA: Auth element wasn't found.")
-        return null;
-    }
-    const authToken = authElement.innerText;
-    if (!authToken) {
-        console.error("BM-EXTRA: Auth Token is missing.")
-        return null;
-    }
-
-    return authToken;
-}
-
-let _rconElement = null;
-export async function getRconElement() {    
-    if (!_rconElement || Date.now() > (_rconElement.timestamp + 50)) {
-        _rconElement = {
+const _getElement = {};
+export function getElementWhenAppears(identifier, isClass) {
+    identifier = isClass ? `.${identifier}` : `#${identifier}`;
+    if (!_getElement[identifier] || Date.now() > (_getElement[identifier].timestamp + 50)) {
+        _getElement[identifier] = {
             timestamp: Date.now(),
-            element: findRconElement()
+            element: findElementWhenAppears(identifier)
         }
     }
 
-    return _rconElement.element;
+    return _getElement[identifier].element;
 }
-async function findRconElement() {
-    let element = document.getElementById("RCONPlayerPage");
+async function findElementWhenAppears(selector) {
+    let element = document.querySelector(selector);
     let count = 0;
+
     while (!element) {
+        if (count > 50) break;
+        await new Promise(r => setTimeout(r, 25 + (count * 5)));
+
+        element = document.querySelector(selector);
         count++;
-        if (count > 50) {
-            console.error("BM-EXTRA: Failed to locate the RCONPlayerPage element.");
-            return null;
-        }
-        await new Promise(r => { setTimeout(r, 25 + (count * 5)); })
-        element = document.getElementById("RCONPlayerPage");
     }
+    if (!element) return null;
     return element;
 }
-
-let running = false;
-let _main = null;
-export async function getMain() {
-    if ((!_main || Date.now() > (_main.timestamp + 100)) && !running) {
-        _main = {
-            timestamp: Date.now(),
-            element: findMain()
-        }
-    }
-
-    return _main.element;
-}
-async function findMain() {
-    running = true;
-    try {
-        const url = window.location.href;
-        if (url.includes("players") && url.split("/").length == 6) 
-            return await getMainFromRconElement();
-        
-        return await getMainElement()
-    } catch (error) {
-        console.error(error);
-    } finally {
-        running = false
-    }
-}
-async function getMainFromRconElement() {
-    let element = document.getElementById(RCON_PLAYER_PAGE_ID);
-    let count = 0;
-    while (!element) {
-        count++;
-        if (count > 100) {
-            console.error("BM-EXTRA: Failed to locate the main element.");
-            return null;
-        }
-        await new Promise(r => { setTimeout(r, 25 + (count * 5)); })
-        element = document.getElementById(RCON_PLAYER_PAGE_ID);
-    }
-    return element.parentElement;
-
-}
-async function getMainElement() {
-    let element = document.getElementsByClassName(MAIN_ELEMENT_CLASS_NAME)[0];
-    let count = 0;
-    while (!element) {
-        count++;
-        if (count > 100) {
-            console.error("BM-EXTRA: Failed to locate the main element.");
-            return null;
-        }
-        await new Promise(r => { setTimeout(r, 25 + (count * 5)); })
-        element = document.getElementsByClassName(MAIN_ELEMENT_CLASS_NAME)[0];
-    }
-    return element;
-
-}
-
-let _identifierTable = null;
-export async function getIdentifierTable() {
-    if (!_identifierTable || Date.now() > (_identifierTable.timestamp + 50)) {
-        _identifierTable = {
-            timestamp: Date.now(),
-            element: findIdentifierTable()
-        }
-    }
-
-    return _identifierTable.element;
-}
-async function findIdentifierTable() {
-    let element = document.getElementsByClassName(IDENTIFIER_TABLE_CLASS_NAME);
-    let count = 0;
-    while (!element[0]) {
-        count++;
-        if (count > 50) {
-            console.error("BM-EXTRA: Failed to locate the Identifier table element.");
-            return null;
-        }
-        await new Promise(r => { setTimeout(r, 25 + (count * 5)); })
-        element = document.getElementsByClassName(IDENTIFIER_TABLE_CLASS_NAME);
-    }
-    return element[0].lastChild.children;
-}
-
 
 const ONE_SECOND = 1000;
 const ONE_MINUTE = 60 * ONE_SECOND;
@@ -158,7 +57,6 @@ export function getBmInfoTimeString(timestamp) {
     return "NaN";
 }
 
-
 export async function getSteamFriendlistFromSteam(steamId) {
     try {
         const STEAM_API_KEY = localStorage.getItem("BME_STEAM_API_KEY");
@@ -184,7 +82,7 @@ export async function getSteamFriendlistFromRustApi(steamId) {
     try {
         const RUST_API_KEY = localStorage.getItem("BME_RUST_API_KEY");
         if (!RUST_API_KEY) return "NO_API_KEY";
-        if (RUST_API_KEY[54] !== "1") return "MISSING_PERMISSION" 
+        if (RUST_API_KEY[54] !== "1") return "MISSING_PERMISSION"
 
         let value = null;
         chrome.runtime.onMessage.addListener(function (response) {
@@ -222,6 +120,102 @@ export function checkIfAlright(bmId, elementId, pageId) {
         if (!window.location.href.includes("/players/")) return true;
         if (window.location.href.split("/").length !== 6) return true;
     }
-    
+
     return false; //Good to go!
+}
+
+export async function getLastServer(bmProfile, onlyMyServer) {
+    const myServers = await getMyServers(true);
+    if (!myServers) return null;
+
+    let servers = bmProfile.included
+        .filter(item => item.type === "server")
+        .map(server => {
+            return {
+                name: server.attributes?.name,
+                id: server.id,
+                orgId: server?.relationships?.organization?.data?.id,
+                lastPlayed: new Date(server.meta.lastSeen).getTime(),
+                online: server.meta.online,
+            }
+        })
+        .sort((a, b) => b.lastPlayed - a.lastPlayed);
+
+
+    if (onlyMyServer) {
+        servers = servers.filter(item => myServers.includes(item.id));
+        const lastServer = servers[0];
+        if (!lastServer) return null;
+        return lastServer;
+    }
+
+    const lastServer = servers[0];
+    if (!lastServer) return null;
+    return lastServer
+}
+export async function getMyServers(onlyIds) {
+    const externalAuthToken = localStorage.getItem("BME_BATTLEMETRICS_API_KEY");
+    const internalAuthToken = !externalAuthToken ? getAuthToken() : null;
+    const token = externalAuthToken ? externalAuthToken : internalAuthToken;
+
+    let myServers = JSON.parse(localStorage.getItem("BME_MY_SERVER_CACHE"));
+    if (myServers && myServers.timestamp > Date.now() - 24 * 60 * 60 * 1000) {
+        if (onlyIds) return myServers.servers.map(server => server.id);
+        else return myServers.servers;
+    }
+
+    const resp = await fetch(`https://api.battlemetrics.com/servers?version=^0.1.0&filter[rcon]=true&page[size]=100&access_token=${token}`)
+    if (resp?.status !== 200) {
+        console.error(`Failed to request your servers | Status: ${resp?.status}`);
+        return null;
+    }
+
+    const data = await resp.json();
+    myServers = {
+        timestamp: Date.now(),
+        servers: data.data.map(server => {
+            return {
+                id: server.id,
+                name: server?.attributes?.name,
+                orgId: server?.relationships?.organization?.data?.id
+            }
+        })
+    }
+
+    localStorage.setItem("BME_MY_SERVER_CACHE", JSON.stringify(myServers))
+    if (onlyIds) return myServers.servers.map(server => server.id);
+    else return myServers.servers;
+}
+export function getAuthToken() {
+    const authElement = document.getElementById("oauthToken");
+    if (!authElement) {
+        console.error("BM-EXTRA: Auth element wasn't found.")
+        return null;
+    }
+    const authToken = authElement.innerText;
+    if (!authToken) {
+        console.error("BM-EXTRA: Auth Token is missing.")
+        return null;
+    }
+
+    return authToken;
+}
+
+export function setNativeValue(select, value, highlight) {
+    const originalValue = select.value;
+
+    select.value = value;
+    if (select.value !== value) {
+        select.value = originalValue;
+        if (highlight) highlightElement(select, "red");
+        return;
+    }
+    if (highlight) highlightElement(select, "green");
+
+    select.dispatchEvent(new Event("input", { bubbles: true }));
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+}
+function highlightElement(element, color) {
+    element.classList.add(`bme-${color}-change`);
+    setTimeout(() => { element.classList.remove(`bme-${color}-change`); }, 400);
 }

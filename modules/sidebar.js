@@ -1,8 +1,8 @@
-import { getMain, getSteamFriendlistFromRustApi, getSteamFriendlistFromSteam, getTimeString } from "./misc.js";
+import { getElementWhenAppears, getLastServer, getSteamFriendlistFromRustApi, getSteamFriendlistFromSteam, getTimeString, setNativeValue } from "./misc.js";
 
 let insertSidebarsProcess = false;
 export async function insertSidebars() {
-    const mainElement = await getMain();
+    const mainElement = await getElementWhenAppears("main", true);
     if (!mainElement) return console.error("BM-EXTRA: Failed to locate parent of rconContainer for sidebar placements.");
 
     const elementsToRemove = document.querySelectorAll(".bme-sidebar");
@@ -297,7 +297,7 @@ export async function updatePlayerProfileElements(cache) {
     }
 }
 
-function getPlayerElement(player, settings) {    
+function getPlayerElement(player, settings) {
     const avatarValue = player.steamData?.avatar ? player.steamData.avatar : "unknown";
     const nameValue = player.steamData?.name ? player.steamData.name : player.steamId;
     const setupValue = player.steamData?.setup !== undefined ? player.steamData.setup : null;
@@ -540,4 +540,185 @@ function getBanElement(ban) {
     innerDiv.appendChild(timestamp);
 
     return element
+}
+
+export function insertBanPresets(settings, bmProfile) {
+    const spot = settings.presets.spot;
+    const sidebarSlot = document.getElementById(`bme-sidebar-${spot}`);
+    if (!sidebarSlot) return console.error(`BM-EXTRA: Sidebar element couldn't be located: ${`bme-sidebar-${spot}`}`)
+
+    const banPresetsElement = getBanPresetsElement(settings.presets, bmProfile)
+    sidebarSlot.append(banPresetsElement);
+
+
+    if (!settings.presets.setupBansAfterFirst) return;
+    const lastUse = JSON.parse(localStorage.getItem("BME_LAST_PRESET_USE"));
+    if (!lastUse) return;
+
+    //Wasn't used recently
+    if ((Date.now() - (2 * 60 * 1000)) > Number(lastUse.timestamp)) return;
+
+    const banPresetsBody = document.getElementsByClassName("bme-sidebar-preset-body")[0];
+    const button = banPresetsBody?.children[lastUse.index];
+    if (button) button.click();
+}
+function getBanPresetsElement(presetSettings, bmProfile) {
+    const element = document.createElement("div");
+
+    const header = getBanPresetsHeader(presetSettings.items);
+    const body = getBanPresetsBody(presetSettings, bmProfile);
+    element.append(header, body)
+
+    return element;
+}
+function getBanPresetsHeader(presets) {
+    const element = document.createElement("div");
+    element.classList.add("bme-friendlist-header");
+    element.innerHTML = `<h1>Ban Presets(${presets.length}):</h1>`
+    return element;
+}
+function getBanPresetsBody(presetSettings, bmProfile) {
+    const element = document.createElement("div");
+    element.classList.add("bme-sidebar-preset-body")
+    if (presetSettings.items.length === 0) {
+        element.innerText = "PLACEHOLDER_NO_PRESET";
+        return element;
+    }
+
+    presetSettings.items.forEach((preset, index) => {
+        const button = document.createElement("button");
+        button.classList.add("bme-sidebar-preset-button")
+        button.style.setProperty("--border-color", preset.color)
+        button.style.setProperty("--bg-color", `${preset.color}25`)
+
+        button.innerText = preset.name;
+        button.addEventListener("click", () => {
+            banPresetButtonClicked(preset, bmProfile, presetSettings.pasteEvidenceIfEmpty)
+
+            const activated = { index, timestamp: Date.now() };
+            localStorage.setItem("BME_LAST_PRESET_USE", JSON.stringify(activated));
+        })
+        element.append(button)
+    })
+
+    return element
+}
+async function banPresetButtonClicked(preset, bmProfile, pasteEvidence) {
+    const server = preset.server;
+    let serverId = server !== "last" ? server : null;
+    if (server === "last") {
+        bmProfile = await bmProfile;
+        const lastServer = await getLastServer(bmProfile, true);
+        serverId = lastServer.id;
+    }
+
+    const banServerSelector = await getBanHeaderElement("banServerSelector");
+    if (!banServerSelector) return console.error("BM-EXTRA: Failed to locate banServerSelector!");
+
+    setNativeValue(banServerSelector, serverId, true);
+
+    const banList = preset.banList;
+    if (banList !== "default") {
+        const banListSelector = await getBanHeaderElement("banListSelector");
+        if (!banListSelector) return console.error("BM-EXTRA: Failed to locate banListSelector!");
+
+        setNativeValue(banListSelector, banList, true);
+    }
+
+    const banDuration = preset.duration;
+    const banDurationInput = await getElementWhenAppears("banned_until");
+    if (banDurationInput) {
+        if (banDuration != -1) {
+            const ONE_DAY = 24 * 60 * 60 * 1000;
+            const timestamp = Date.now() + (ONE_DAY * Number(banDuration))
+            const timeString = getBanDurationString(timestamp);
+
+            setNativeValue(banDurationInput, timeString, true)
+        } else {
+            setNativeValue(banDurationInput, "", true)
+        }
+    }
+
+    const banReason = preset.reason;
+    if (banReason !== "default") {
+        const banReasonElement = await getElementWhenAppears("reason");
+
+        setNativeValue(banReasonElement, banReason, true);
+    }
+
+    const rich = await readClipboardRich();
+    if (rich && pasteEvidence) {
+        const banNote = await getElementWhenAppears("tiptap", true);
+        if (banNote.innerText.trim() !== "") return;
+        
+        const data = new DataTransfer();
+        data.setData("text/html", rich.value);
+
+        banNote.dispatchEvent(new ClipboardEvent("paste", {
+            clipboardData: data,
+            bubbles: true,
+            cancelable: true
+        }));
+    }
+
+}
+async function readClipboardRich() {
+    const items = await navigator.clipboard.read();
+    for (const item of items) {
+        if (item.types.includes("text/html")) {
+            const blob = await item.getType("text/html");
+            const value = await blob.text();
+            return { type: "text/html", value: stripGyazoImgLink(value) };
+        }
+        
+        if (item.types.includes("text/plain")) {
+            const blob = await item.getType("text/plain");
+            const value = await blob.text();
+            return { type: "text/plain", value: value };
+        }
+    }
+    return null;
+}
+function stripGyazoImgLink(html) {
+    const doc = document.createElement("div");
+    doc.innerHTML = html;
+    const childNodes = Array.from(doc.children);
+
+    let lastLink = "";
+    for (let i = childNodes.length - 1; i >= 0; i--) {
+        const item = childNodes[i];
+        if (item.nodeName === "A") lastLink = item.href;
+        if (item.nodeName === "IMG" && item.src === `${lastLink}.png`) {
+            item.remove();
+            if (childNodes[i + 1]?.nodeName === "BR") childNodes[i + 1].remove()
+        }
+    }    
+    return doc.innerHTML;
+}
+async function getBanHeaderElement(type) {
+    const banForm = await getElementWhenAppears("ban-form", true);
+    const elements = Array.from(banForm?.firstChild?.children);
+
+    let prime = false;
+    for (const element of elements) {
+        if (prime) return element.firstChild;
+
+        const txt = element.innerText.trim();
+        if (type === "banServerSelector" && txt === "Banned on server:") prime = true;
+        if (type === "banListSelector" && txt === "Ban List:") prime = true;
+    }
+}
+function getBanDurationString(timestamp) {
+    const date = new Date(timestamp);
+
+    return (
+        `${pad(date.getDate())}/` +
+        `${pad(date.getMonth() + 1)}/` +
+        `${date.getFullYear()} ` +
+        `${pad(date.getHours())}:` +
+        `${pad(date.getMinutes())}`
+    );
+}
+function pad(str) {
+    return String(str).padStart(2, "0");
 }

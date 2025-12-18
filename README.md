@@ -11,6 +11,7 @@ Chromium-based BattleMetrics extension providing quality-of-life features for Ru
 
 ## Features:
 - Steam Friends
+- Ban Presets
 - Teaminfo
 - BM Information Panel
 - Extra Identifier Information
@@ -18,6 +19,9 @@ Chromium-based BattleMetrics extension providing quality-of-life features for Ru
 
 ### Steam Friends
 Displays the current Steam Friends of the player if you provided a [Steam API Key](https://steamcommunity.com/dev/apikey).
+
+### Ban Presets
+Set up your most common ban types so you can activate them with one click.
 
 ### Teaminfo:
 Displays basic information about a player's team status on the BattleMetrics RCON profile.

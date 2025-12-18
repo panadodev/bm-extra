@@ -104,7 +104,7 @@
     margin-bottom: 5px;
 }
 
-.bme-settings-row button{
+.bme-settings-row button {
     background: #0c5da5;
     padding: 3px 15px;
     border: none;
@@ -113,10 +113,12 @@
 
     transition: 60ms;
 }
-.bme-settings-row button:hover{
+
+.bme-settings-row button:hover {
     background: #0c5ea5e6;
 }
-.bme-settings-row button:active{
+
+.bme-settings-row button:active {
     background: #0c5ea5bf;
 }
 
@@ -185,8 +187,8 @@
 }
 
 .bme-red-highlight {
-    background: #ff555560;
-    border-color: #ff5555;
+    background: #ff555560 !important;
+    border-color: #ff5555 !important;
 }
 
 .bme-yellow-highlight {
@@ -252,34 +254,45 @@
 .bme-title-row {
     gap: 30px;
 }
-.bme-settings-req{
+
+.bme-settings-req {
     margin-left: 20px !important;
+    color: #dcdcdc;
 }
+
 .bme-settings-text-green {
     color: #55ff55;
 }
+
 .bme-settings-text-red {
     color: #ff5555;
 }
 
 .bme-settings-segment {
-    margin-left: 60px !important;
+    border-left: 1px solid #ffffff;
+    margin-left: 50px !important;
+    padding-left: 10px !important;
     margin-bottom: 20px !important;
-}
 
+    transition: 150ms;
+}
+.bme-inactive-segment{
+    opacity: 0.4;
+}
 .bme-settings-segment>div {
     margin-top: 8px !important;
 }
 
-.bme-settings-key-container{
+.bme-settings-key-container {
     margin-bottom: 20px;
 }
+
 .bme-settings-description,
 .bme-settings-key-container p,
 .bme-key-settings-wrapper,
 .bme-key-settings-detail {
     margin-left: 20px !important;
-    color: rgb(220, 220, 220);
+    color: #dcdcdc;
 }
 
 .bme-key-settings-wrapper {
@@ -287,12 +300,14 @@
     gap: 5px;
     margin-top: 3px;
 }
-.bme-settings-key-container > h3,
-.bme-settings-title{
+
+.bme-settings-key-container>h3,
+.bme-settings-title {
     font-size: 26px;
     line-height: 1;
     color: rgb(230, 230, 230);
 }
+
 .bme-key-settings-wrapper>input {
     width: 500px;
     padding: 3px 10px;
@@ -329,7 +344,8 @@
 .bme-key-settings-wrapper>button:active {
     background: #ffffff40;
 }
-.bme-key-settings-optional{
+
+.bme-key-settings-optional {
     font-size: 13px;
     color: #8d8d8d;
 }
@@ -389,6 +405,7 @@
     margin-left: 10px;
     transition: 400ms;
 }
+
 .bme-settings-color-input {
     width: 80px;
     height: 26px;
@@ -399,6 +416,7 @@
     border-radius: 6px;
     cursor: pointer;
 }
+
 .bme-settings-color-input::-webkit-color-swatch-wrapper {
     padding: 0;
 }
@@ -408,6 +426,192 @@
     border-radius: 6px;
 }
 
+#new-ban-preset-container {
+    border-top: 1px solid #ffffff;
+    border-bottom: 1px solid #ffffff;
+    min-height: 60px;
+    padding: 20px;
+
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#new-ban-preset-container>input {
+    width: 100%;
+    height: 30px;
+    text-align: center;
+
+    font-size: 16px;
+    background-color: #111111;
+    border: 1px solid #333333;
+    border-radius: 3px;
+    outline: none;
+    transition: 200ms;
+}
+.bme-preset-color-settings{
+    padding: 0 !important;
+}
+.bme-preset-color-settings::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.bme-preset-color-settings::-webkit-color-swatch {
+    border: none;
+    border-radius: 3px;
+    background-color: rgb(248, 248, 80)
+}
+
+#new-ban-preset-container>input:focus,
+#new-ban-preset-container>input:active,
+#new-ban-preset-container>input:hover {
+    background: #0e0e0e;
+    outline: none;
+}
+
+.bme-settings-selector {
+    height: 30px;
+    background-color: #111111;
+    border: 1px solid #333333;
+    padding: 3px 10px;
+    border-radius: 3px;
+    font-size: 14px;
+
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    transition: 200ms;
+}
+
+.bme-settings-selector::-webkit-scrollbar {
+    display: none;
+}
+
+.bme-settings-selector:focus {
+    outline: none;
+}
+
+.bme-settings-selector option {
+    background-color: #212121;
+    color: #eaeaea;
+}
+
+.bme-settings-selector option:disabled {
+    background-color: #131313;
+    color: #7b7b7b;
+}
+
+.bme-settings-selector option:hover {
+    background: #ff0000 !important;
+}
+
+#new-ban-preset-container>button {
+    width: 150px;
+    margin: 0px auto;
+    background: #0c5da5;
+    border: 2px solid #0c5ea6e6;
+    transition: 150ms;
+}
+
+#new-ban-preset-container>button:hover {
+    background: #0c5ea6e6;
+}
+
+#new-ban-preset-container>button:active {
+    background: #0c5ea699;
+    border-color: #0c5ea699;
+}
+
+#bme-ban-presets-showcase {
+    padding: 20px;
+    padding-bottom: 80px;
+    border-bottom: 1px solid #ffffff;
+}
+#bme-ban-presets-showcase h3{
+    margin-bottom: 5px;
+}
+
+#bme-ban-presets-showcase-body {
+    padding-left: 20px;
+
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.bme-ban-preset-showcase-item {
+    width: 100%;
+    height: 40px;
+    padding: 0px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    background: #151515;
+    border-left: 5px solid var(--color);
+}
+
+.bme-ban-preset-showcase-item>p {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.bme-control-wrapper {
+    display: flex;
+    gap: 10px;
+
+    justify-content: center;
+    align-items: center;
+}
+
+.bme-control-wrapper>img {
+    width: 35px;
+    height: 35px;
+    padding: 2.5px;
+    background: #ffffff20;
+    border-radius: 5px;
+
+    cursor: pointer;
+    opacity: 0.4;
+    transition: 200ms;
+
+    --rot: 0deg;
+    transform: rotate(var(--rot)) scale(0.8);
+
+    -webkit-user-drag: none;
+    user-drag: none;
+    user-select: none;
+}
+
+.bme-control-wrapper>img.confirm {
+    filter: brightness(0) saturate(100%) invert(56%) sepia(82%) saturate(6000%) hue-rotate(340deg) brightness(102%);
+    opacity: 0.6;
+    transform: rotate(var(--rot)) scale(0.95);
+}
+
+.bme-control-wrapper>img:hover {
+    opacity: 0.65;
+}
+
+.bme-control-wrapper>img:active {
+    opacity: 1;
+    transform: rotate(var(--rot)) scale(1);
+}
+
+.up-arrow {
+    --rot: -90deg !important;
+}
+
+.down-arrow {
+    --rot: 90deg !important;
+}
+
+.arrow-disabled:hover,
+.arrow-disabled:focus,
+.arrow-disabled {
+    opacity: 0.2 !important;
+    transform: rotate(var(--rot)) scale(0.8) !important;
+    cursor: not-allowed !important;
+}
 
 
 
@@ -476,6 +680,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
     .bme-toggle-input[type="checkbox"],
     .bme-toggle-input[type="checkbox"]::after {
         transition: none;

@@ -6,7 +6,7 @@ console.log("Service worker loaded!")
  */
 chrome.runtime.onMessage.addListener(async (request, sender) => {
     if (!request.type.startsWith("BME_")) return;
-    console.log(`${request.type.padEnd(30)} | ${request?.apiKey?.substring(0, 10)} | ${request.subject.includes(",") ? `Account count: ${request.subject.split(",").length}` : request.subject}`); 
+    console.log(`${request.type.padEnd(30)} | ${`${request?.apiKey?.substring(0, 10)}`.padEnd(10)} | ${request.subject.includes(",") ? `Account count: ${request.subject.split(",").length}` : request.subject}`); 
     
     /**
      * returnObject:

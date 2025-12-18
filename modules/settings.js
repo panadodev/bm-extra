@@ -1,5 +1,6 @@
+import { getMyServers, setNativeValue } from "./misc.js";
 const ONE_DAY = 24 * 60 * 60 * 1000;
-const spots = [
+const allSidebarSlots = [
     { value: "right-slot-1", display: "RIGHT 1" },
     { value: "right-slot-2", display: "RIGHT 2" },
     { value: "right-slot-3", display: "RIGHT 3" },
@@ -9,6 +10,19 @@ const spots = [
     { value: "left-slot-3", display: "LEFT 3" },
     { value: "left-slot-4", display: "LEFT 4" },
 ]
+const banSidebarSlots = [
+    { value: "right-slot-1", display: "RIGHT 1" },
+    { value: "right-slot-2", display: "RIGHT 2" },
+    { value: "left-slot-1", display: "LEFT 1" },
+    { value: "left-slot-2", display: "LEFT 2" },
+]
+let myServers = null;
+loadMyServers();
+async function loadMyServers() {
+    if (!myServers) myServers = await getMyServers();
+}
+
+
 export async function displaySettings() {
     if (document.getElementById("bme-settings-background")) return;
 
@@ -43,7 +57,7 @@ function getSettingsMenu() {
     const div = document.createElement("div")
     div.id = "bme-settings-menu";
 
-    const menuPoints = ["Overview", "Identifier", "BM Information", "Sidebar",/*"Multi Org", "Evasion Checker",*/ "API Keys"];
+    const menuPoints = ["Overview", "Identifier", "BM Information", "Sidebar", "Bans",/*"Multi Org", "Evasion Checker",*/ "API Keys"];
     for (let i = 0; i < menuPoints.length; i++) {
         const point = menuPoints[i];
 
@@ -79,9 +93,9 @@ function getSettingsBody(index) {
     if (index === 1) return getIdentifierSettings();
     if (index === 2) return getBmInfoSettings();
     if (index === 3) return getSidebarSettings();
-    if (index === 4) return getApiKeysSettings();
+    if (index === 4) return getBanPageSettings();
+    if (index === 5) return getApiKeysSettings();
 }
-
 
 
 function getOverviewSettings() {
@@ -158,7 +172,6 @@ function getOverviewSettings() {
 }
 
 
-
 function getIdentifierSettings() {
     const element = document.createElement("div");
     const title = document.createElement("h1");
@@ -178,13 +191,15 @@ function getIdentifierSettings() {
         "Shows the name of the ISP and it's ASN on the IP addresses.",
         null, settingsBucket, "showIspAndAsnData", settings.showIspAndAsnData
     )
+
+    const vpnSegment = document.createElement("div")
+    vpnSegment.classList.add("bme-settings-segment");
     const highlightVpn = getToggleSettingsElement(
         "Highlight VPNs",
         "Highlights VPNs to make it easier to differentiate.",
-        null, settingsBucket, "highlightVpn", settings.highlightVpn
+        null, settingsBucket, "highlightVpn",
+        settings.highlightVpn, vpnSegment
     )
-    const vpnSegment = document.createElement("div")
-    vpnSegment.classList.add("bme-settings-segment");
 
     const removeVpnLabel = getToggleSettingsElement(
         "Remove VPN label",
@@ -208,13 +223,16 @@ function getIdentifierSettings() {
     )
     vpnSegment.append(removeVpnLabel, vpnAbove, vpnBgColor, vpnOpacity)
 
+    const avatarsSegment = document.createElement("div")
+    avatarsSegment.classList.add("bme-settings-segment");
+
     const displayAvatars = getToggleSettingsElement(
         "Display Avatars",
         `Display the avatars as identifiers that the player used in the past. It will only work if the identifiers are sorted by "Type".`,
-        ["RUST API - HA"], settingsBucket, "displayAvatars", settings.displayAvatars
+        ["RUST API - HA"], settingsBucket, "displayAvatars",
+        settings.displayAvatars, avatarsSegment
     )
-    const avatarsSegment = document.createElement("div")
-    avatarsSegment.classList.add("bme-settings-segment");
+
     const zoomableAvatars = getToggleSettingsElement(
         "Zoomable Avatars",
         "Make the Avatars grow to their full sizes so you can get a better view of them when hovered over.",
@@ -231,7 +249,6 @@ function getIdentifierSettings() {
     )
     return element;
 }
-
 
 
 function getBmInfoSettings() {
@@ -401,33 +418,38 @@ function getSidebarSettings() {
     const settings = JSON.parse(localStorage.getItem(settingsBucket));
 
 
+    const currentTeamSegment = document.createElement("div")
+    currentTeamSegment.classList.add("bme-settings-segment");
+
     const currentTeamEnabled = getToggleSettingsElement(
         "Show Current Team",
         "Shows the current team of the player.",
-        null, settingsBucket, "currentTeam-enabled", settings.currentTeam.enabled
+        null, settingsBucket, "currentTeam-enabled",
+        settings.currentTeam.enabled, currentTeamSegment
     )
-    const currentTeamSegment = document.createElement("div")
-    currentTeamSegment.classList.add("bme-settings-segment");
 
     const currentTeamSpot = getSwitchSettingsElement(
         "Position:",
         "Choose which sidebar spot should the current team be present.",
-        null, settingsBucket, "currentTeam-spot", getSpotDisplay(settings.currentTeam.spot), spots
+        null, settingsBucket, "currentTeam-spot",
+        getSpotDisplay(settings.currentTeam.spot, allSidebarSlots), allSidebarSlots
     )
     currentTeamSegment.append(currentTeamSpot)
+
+    const friendComparatorSegment = document.createElement("div")
+    friendComparatorSegment.classList.add("bme-settings-segment");
 
     const friendComparatorEnabled = getToggleSettingsElement(
         "Player Comparator",
         "Allows you to easily compare player's friendlist for common friends between them.",
-        null, settingsBucket, "friendComparator-enabled", settings.friendComparator.enabled
+        null, settingsBucket, "friendComparator-enabled",
+        settings.friendComparator.enabled, friendComparatorSegment
     )
-    const friendComparatorSegment = document.createElement("div")
-    friendComparatorSegment.classList.add("bme-settings-segment");
 
     const friendComparatorSpot = getSwitchSettingsElement(
         "Position:",
         "Choose which sidebar spot should the player comparator be present.",
-        null, settingsBucket, "friendComparator-spot", getSpotDisplay(settings.friendComparator.spot), spots
+        null, settingsBucket, "friendComparator-spot", getSpotDisplay(settings.friendComparator.spot, allSidebarSlots), allSidebarSlots
     )
     const comparatorColor = getColorSettingsElement(
         "Active Color:",
@@ -436,18 +458,20 @@ function getSidebarSettings() {
     )
     friendComparatorSegment.append(friendComparatorSpot, comparatorColor)
 
+    const steamFriendsSegment = document.createElement("div")
+    steamFriendsSegment.classList.add("bme-settings-segment");
+
     const steamFriendsEnabled = getToggleSettingsElement(
         "Show Friends",
         "Shows the current Steam Friends on the sidebar.",
-        ["STEAM API KEY"], settingsBucket, "friends-enabled", settings.friends.enabled
+        ["STEAM API KEY"], settingsBucket, "friends-enabled",
+        settings.friends.enabled, steamFriendsSegment
     )
-    const steamFriendsSegment = document.createElement("div")
-    steamFriendsSegment.classList.add("bme-settings-segment");
 
     const steamFriendsSpot = getSwitchSettingsElement(
         "Position:",
         "Choose which sidebar spot should the Steam Friends be present.",
-        null, settingsBucket, "friends-spot", getSpotDisplay(settings.friends.spot), spots
+        null, settingsBucket, "friends-spot", getSpotDisplay(settings.friends.spot, allSidebarSlots), allSidebarSlots
     )
     const steamFriendsShowOnline = getToggleSettingsElement(
         "Highlight online friends",
@@ -460,19 +484,21 @@ function getSidebarSettings() {
         null, settingsBucket, "friends-onlineColor", settings.friends.onlineColor
     )
     steamFriendsSegment.append(steamFriendsSpot, steamFriendsShowOnline, steamFriendsOnlineColor)
+    
+    const historicFriendsSegment = document.createElement("div")
+    historicFriendsSegment.classList.add("bme-settings-segment");
 
     const historicFriendsEnabled = getToggleSettingsElement(
         "Show Historic Friends",
         "Show Historic Friends on the sidebar",
-        ["RUST API - HF"], settingsBucket, "historicFriends-enabled", settings.historicFriends.enabled
+        ["RUST API - HF"], settingsBucket, "historicFriends-enabled",
+        settings.historicFriends.enabled, historicFriendsSegment
     )
-    const historicFriendsSegment = document.createElement("div")
-    historicFriendsSegment.classList.add("bme-settings-segment");
 
     const historicFriendsSpot = getSwitchSettingsElement(
         "Position:",
         "Choose which sidebar spot should the Historic Friends be present.",
-        null, settingsBucket, "historicFriends-spot", getSpotDisplay(settings.historicFriends.spot), spots
+        null, settingsBucket, "historicFriends-spot", getSpotDisplay(settings.historicFriends.spot, allSidebarSlots), allSidebarSlots
     )
     const seenOnOrigin = getColorSettingsElement(
         "Seen On Origin:",
@@ -486,18 +512,20 @@ function getSidebarSettings() {
     )
     historicFriendsSegment.append(historicFriendsSpot, seenOnOrigin, seenOnFriend)
 
+    const publicBansSegment = document.createElement("div")
+    publicBansSegment.classList.add("bme-settings-segment");
+
     const publicBansEnabled = getToggleSettingsElement(
         "Show Public bans",
         "Shows the Public Bans on the sidebar",
-        ["RUST API - PB"], settingsBucket, "publicBans-enabled", settings.publicBans.enabled
+        ["RUST API - PB"], settingsBucket, "publicBans-enabled",
+        settings.publicBans.enabled, publicBansSegment
     )
-    const publicBansSegment = document.createElement("div")
-    publicBansSegment.classList.add("bme-settings-segment");
 
     const publicBansSpot = getSwitchSettingsElement(
         "Position:",
         "Choose which sidebar spot should the public bans be present.",
-        null, settingsBucket, "publicBans-spot", getSpotDisplay(settings.publicBans.spot), spots
+        null, settingsBucket, "publicBans-spot", getSpotDisplay(settings.publicBans.spot, allSidebarSlots), allSidebarSlots
     )
     publicBansSegment.append(publicBansSpot)
 
@@ -513,11 +541,408 @@ function getSidebarSettings() {
     return element;
 
 }
-function getSpotDisplay(spotValue) {
+function getSpotDisplay(spotValue, spots) {
     for (const spot of spots)
         if (spot.value === spotValue)
             return spot.display;
     return "N/A"
+}
+
+
+function getBanPageSettings() {
+    const element = document.createElement("div");
+    const title = document.createElement("h1");
+    title.innerText = "Ban Page Settings";
+    element.appendChild(title);
+
+    const settingsBucket = "BME_BAN_PAGE_SETTINGS";
+    const settings = JSON.parse(localStorage.getItem(settingsBucket));
+
+    const selectLastServer = getToggleSettingsElement(
+        "Select Last Server",
+        "Automatically selects the last server if it's present on your server list.",
+        null, settingsBucket, "selectLastServer", settings.selectLastServer
+    )
+    
+    const banPresetsSegment = document.createElement("div")
+    banPresetsSegment.classList.add("bme-settings-segment");
+    
+    const banPresetsEnabled = getToggleSettingsElement(
+        "Enable Ban Presets",
+        "Allows you to create ban presets that you can activate with one click on the sidebar.",
+        null, settingsBucket, "presets-enabled",
+        settings.presets.enabled, banPresetsSegment
+    )
+
+    const banPresetSidebarSpot = getSwitchSettingsElement(
+        "Position:",
+        "Choose which sidebar spot should the ban presets be present",
+        null, settingsBucket, "presets-spot", getSpotDisplay(settings.presets.spot, banSidebarSlots),
+        banSidebarSlots
+    )
+
+    const setupBansAfterFirst = getToggleSettingsElement(
+        "Chain Bans",
+        "If you used a preset, the rest of the bans you open will automatically invoke the same preset.",
+        null, settingsBucket, "presets-setupBansAfterFirst", settings.presets.setupBansAfterFirst
+    );
+
+    const copyEvidence = getToggleSettingsElement(
+        "Use Clipboard For Evidence",
+        "It will paste the default content of your clipboard if the ban note is empty.",
+        null, settingsBucket, "presets-pasteEvidenceIfEmpty", settings.presets.pasteEvidenceIfEmpty
+    )
+    banPresetsSegment.append(banPresetSidebarSpot, setupBansAfterFirst, copyEvidence,);
+
+    const bootstrap = document.getElementById("storeBootstrap");
+    if (bootstrap && myServers) {
+        const rawOrgData = JSON.parse(bootstrap.innerText).state.account.organizations
+        const orgData = rawOrgData.map(item => getOrgData(item))
+
+        const newPresetCreator = getNewPresetCreatorElement(orgData);
+        banPresetsSegment.append(newPresetCreator);
+
+        const currentPresets = document.createElement("div");
+        currentPresets.id = "bme-ban-presets-showcase";
+        currentPresets.appendChild(getCurrentPresetsShowcase(settings));
+        banPresetsSegment.append(currentPresets)
+    }
+
+    const resetButton = getResetButton("bm-bans")
+    element.append(
+        selectLastServer,
+        banPresetsEnabled, banPresetsSegment,
+
+
+        resetButton
+    )
+
+    return element;
+}
+function getOrgData(orgData) {
+    const newOrgData = {};
+    newOrgData.id = orgData.org_id;
+    newOrgData.name = orgData.name;
+    newOrgData.banLists = orgData.ban_lists.map(banList => {
+        return {
+            name: banList.name,
+            id: banList.list_id,
+            reasons: banList.default_reasons || [],
+            orgId: orgData.org_id,
+        }
+    })
+    newOrgData.servers = orgData.servers.map(serverId => getServerData(serverId))
+    return newOrgData;
+}
+function getServerData(serverId) {
+    if (myServers) {
+        const server = myServers.find(item => item.id === serverId);
+        if (server) return server;
+    }
+
+    return { id: serverId, name: serverId, orgId: null };
+}
+function getNewPresetCreatorElement(orgData) {
+    const servers = [{ name: "Select Server", id: "select" }, { name: "Last Server - Where the player last played", id: "last" }];
+    const banLists = [{ name: "Select Ban List", id: "select" }, { name: "Default | Do not touch", id: "default" }];
+    const defaultReasons = [{ name: "Select Reason", id: "select" }, { name: "Default | Do not touch", id: "default" }];
+    orgData.forEach(org => {
+        org.servers.forEach(server => {
+            servers.push(server)
+        })
+        org.banLists.forEach(banList => {
+            banLists.push(banList);
+        })
+    });
+
+    /**
+     * preset:
+     *   displayName: "string"
+     *   color: "string"
+     *   server: "last" | serverId,
+     *   banList: "default" | banListId,
+     *   reason: "default" | "string"
+     */
+    const element = document.createElement("div");
+    element.id = "new-ban-preset-container"
+
+    const title = document.createElement("h3");
+    title.innerText = "New Ban Preset";
+    element.append(title)
+
+    const nameInput = document.createElement("input");
+    nameInput.placeholder = "Ban Preset Name"
+    element.append(nameInput);
+
+    const colorInput = document.createElement("input");
+    colorInput.value = "#151515";
+    colorInput.classList.add("bme-preset-color-settings")
+    colorInput.type = "color";
+    element.append(colorInput)
+
+    const serverSelect = document.createElement("select");
+    serverSelect.classList = "bme-settings-selector";
+
+    servers.forEach(server => {
+        const option = document.createElement("option");
+        option.value = server.id;
+        option.textContent = server.name;
+        serverSelect.appendChild(option);
+    });
+    serverSelect.addEventListener("change", e => {
+        const value = e.target.value;
+
+        const banListSelector = document.getElementById("ban-list-selector");
+        if (!banListSelector) return console.error("BM-ERROR: banListSelector wasn't found.")
+
+        setNativeValue(banListSelector, "select")
+
+        if (value === "select") {
+            banListSelector.disabled = true;
+            return;
+        }
+
+        banListSelector.disabled = false;
+        const server = servers.find(server => server.id === value);
+        const orgId = server?.orgId || -1;
+
+        const banListOptions = Array.from(banListSelector.children);
+        if (orgId === -1) {
+            banListOptions.forEach(option => option.disabled = false);
+        } else {
+            banListOptions.forEach((option, i) => {
+                const banListOrgId = getBanListOrgId(option.value, banLists);
+                if (option.value === "select") return option.disabled = true;
+                if (option.value === "default") return option.disabled = false;
+
+                if (orgId === banListOrgId) option.disabled = false;
+                else option.disabled = true;
+            })
+        }
+    })
+
+    const banListSelect = document.createElement("select")
+    banListSelect.classList = "bme-settings-selector";
+    banListSelect.id = "ban-list-selector";
+    banListSelect.disabled = true;
+
+    banLists.forEach(banList => {
+        const option = document.createElement("option");
+        option.value = banList.id;
+        option.textContent = `${getOrgName(banList.orgId, orgData)}${banList.name}`;
+        banListSelect.appendChild(option);
+    });
+
+    banListSelect.addEventListener("change", e => {
+        const value = e.target.value;
+
+        const banReasonSelector = document.getElementById("ban-reason-selector");
+        if (!banReasonSelector) return console.error("BM-ERROR: banReasonSelector wasn't found.")
+
+        setNativeValue(banReasonSelector, "select")
+        if (value === "select") return banReasonSelect.disabled = true;
+        if (value === "default") {
+            setNativeValue(banReasonSelector, "default")
+            return banReasonSelect.disabled = true;
+        }
+
+        const banList = banLists.find(banList => banList.id === value);
+
+        const reasons = [];
+        defaultReasons.forEach(reason => reasons.push(reason));
+        banList.reasons.forEach(reason => { reasons.push({ name: reason, id: reason }) });
+
+        banReasonSelector.replaceChildren();
+        for (const reason of reasons) {
+            const opt = document.createElement("option");
+            opt.textContent = reason.name;
+            opt.value = reason.id;
+            banReasonSelector.appendChild(opt);
+            if (reason.id === "select") opt.disabled = true;
+        }
+        banReasonSelector.disabled = false;
+    })
+
+    const banReasonSelect = document.createElement("select")
+    banReasonSelect.classList = "bme-settings-selector";
+    banReasonSelect.id = "ban-reason-selector"
+    banReasonSelect.disabled = true;
+
+    defaultReasons.forEach(reason => {
+        const option = document.createElement("option");
+        option.value = reason.id;
+        option.textContent = `${reason.name}`;
+        banReasonSelect.appendChild(option);
+    });
+
+    const banDuration = document.createElement("input");
+    banDuration.placeholder = "Number of Days | Empty for Permanent"
+
+    const addButton = document.createElement("button");
+    addButton.innerText = "Add New Ban Preset"
+    addButton.addEventListener("click", e => {
+        const items = Array.from(e.target.parentNode.children)
+
+        let isItOkay = true;
+        const name = items[1].value;
+        if (!name) {
+            turnItRed(items[1]);
+            isItOkay = false;
+        }
+
+        const color = items[2].value;
+
+        const server = items[3].value;
+        if (server === "select" || !server) {
+            turnItRed(items[3]);
+            isItOkay = false;
+        }
+
+        const banList = items[4].value;
+        if (banList === "select" || !banList) {
+            turnItRed(items[4]);
+            isItOkay = false;
+        }
+
+        const reason = items[5].value;
+        if (reason === "select" || !reason) {
+            turnItRed(items[5]);
+            isItOkay = false;
+        }
+
+        const duration = items[6].value || -1;
+        if (isNaN(Number(duration))) {
+            turnItRed(items[6]);
+            isItOkay = false;
+        }
+        if (!isItOkay) return;
+
+        const newPreset = { name, color, server, banList, reason, duration };
+        const settings = JSON.parse(localStorage.getItem("BME_BAN_PAGE_SETTINGS"));
+        settings.presets.items.push(newPreset);
+        localStorage.setItem("BME_BAN_PAGE_SETTINGS", JSON.stringify(settings));
+
+        items[1].value = "";
+        //items[2].value = "#151515";
+        setNativeValue(items[3], "select");
+        setNativeValue(items[4], "select");
+        setNativeValue(items[5], "select");
+        items[6].value = "";
+
+        const currentPresets = document.getElementById("bme-ban-presets-showcase");
+        if (!currentPresets) return console.error("BM-EXTRA: Failed to load currentPresets");
+
+        currentPresets.innerHTML = "";
+        currentPresets.appendChild(getCurrentPresetsShowcase(settings));
+    })
+
+    element.append(serverSelect, banListSelect, banReasonSelect, banDuration, addButton);
+    return element;
+}
+function getOrgName(orgId, orgs) {
+    const org = orgs.find(org => org.id === orgId);
+    if (org) return `${org.name} | `;
+    return "";
+}
+function getBanListOrgId(id, banLists) {
+    const banList = banLists.find(banList => banList.id === id);
+    if (banList) return banList.orgId;
+    return -1;
+}
+function turnItRed(element) {
+    element.classList.add("bme-red-highlight");
+    setTimeout(() => { element.classList.remove("bme-red-highlight"); }, 450);
+}
+function getCurrentPresetsShowcase(setting) {
+    const element = document.createElement("div");
+
+    const title = document.createElement("h3");
+    title.innerText = `Current Presets(${setting.presets.items.length}):`;
+    element.append(title);
+
+    const body = document.createElement("div");
+    body.id = "bme-ban-presets-showcase-body"
+    element.append(body)
+
+    setting.presets.items.forEach((preset, i, arr) => {
+        const presetElement = getPresetElement(preset, i, arr.length);
+        body.appendChild(presetElement)
+    })
+
+    return element;
+}
+function getPresetElement(preset, index, max) {
+    const element = document.createElement("div");
+    element.classList.add("bme-ban-preset-showcase-item")
+    element.style.setProperty("--color", preset.color)
+
+    const name = document.createElement("p")
+    name.innerText = `${preset.name}`;
+    element.appendChild(name);
+
+    const controlContainer = document.createElement("div")
+    controlContainer.classList.add("bme-control-wrapper")
+    element.appendChild(controlContainer)
+
+    const arrowUp = document.createElement("img");
+    arrowUp.classList.add(`up-arrow`)
+    if (index === 0) arrowUp.classList.add("arrow-disabled")
+    arrowUp.src = chrome.runtime.getURL('assets/img/arrow.png');
+
+    const deleteButton = document.createElement("img");
+    deleteButton.src = chrome.runtime.getURL('assets/img/trash.png');
+
+    const arrowDown = document.createElement("img");
+    arrowDown.classList.add(`down-arrow`)
+    if (index === max - 1) arrowDown.classList.add("arrow-disabled")
+    arrowDown.src = chrome.runtime.getURL('assets/img/arrow.png');
+
+    arrowUp.addEventListener("click", e => {
+        if (!e.target.classList.contains("arrow-disabled")) processBanPresetChange(index, "up");
+    })
+    arrowDown.addEventListener("click", e => {
+        if (!e.target.classList.contains("arrow-disabled")) processBanPresetChange(index, "down");
+    })
+
+    deleteButton.addEventListener("click", e => {
+        if (e.target.classList.contains("confirm")) {
+            processBanPresetChange(index, "delete");
+        } else {
+            e.target.classList.add("confirm");
+            setTimeout(() => { e?.target?.classList?.remove("confirm") }, 2500);
+        }
+    })
+
+    controlContainer.append(arrowUp, deleteButton, arrowDown)
+
+
+    return element;
+}
+function processBanPresetChange(i, action) {
+    const settings = JSON.parse(localStorage.getItem("BME_BAN_PAGE_SETTINGS"));
+
+    const presets = settings.presets.items;
+    if (action === "up") {
+        const tmp = presets[i - 1];
+        presets[i - 1] = presets[i];
+        presets[i] = tmp;
+    } else if (action === "down") {
+        const tmp = presets[i + 1];
+        presets[i + 1] = presets[i];
+        presets[i] = tmp;
+    } else if (action === "delete") {
+        presets.splice(i, 1);
+    }
+
+    settings.presets.items = presets;
+    localStorage.setItem("BME_BAN_PAGE_SETTINGS", JSON.stringify(settings));
+
+    const bmeBanPresets = document.getElementById("bme-ban-presets-showcase");
+    if (bmeBanPresets) {
+        bmeBanPresets.innerHTML = "";
+        bmeBanPresets.appendChild(getCurrentPresetsShowcase(settings))
+    }
+    return presets;
 }
 
 
@@ -702,7 +1127,7 @@ function invokeChange(type) {
 }
 
 
-function getToggleSettingsElement(title, description, requirements, settingsBucket, settingsName, currentValue) {
+function getToggleSettingsElement(title, description, requirements, settingsBucket, settingsName, currentValue, segment) {
     const element = document.createElement("div");
     element.className = "bme-settings-row";
 
@@ -712,8 +1137,14 @@ function getToggleSettingsElement(title, description, requirements, settingsBuck
     input.classList.add("bme-toggle-input")
     input.type = "checkbox";
     input.checked = currentValue;
+    if (segment && !currentValue) segment.classList.add("bme-inactive-segment");
 
-    input.addEventListener("change", e => { setSettingTo(settingsBucket, settingsName, e.target.checked) })
+    input.addEventListener("change", e => {
+        setSettingTo(settingsBucket, settingsName, e.target.checked);
+
+        if (segment && !e.target.checked) segment.classList.add("bme-inactive-segment");
+        else if (segment && e.target.checked) segment.classList.remove("bme-inactive-segment");
+    })
 
     const titleElement = document.createElement("h3");
     titleElement.className = "bme-settings-title";
@@ -936,6 +1367,7 @@ function getResetButton(type) {
         if (type === "bm-overview") localStorage.setItem("BME_OVERVIEW_SETTINGS", JSON.stringify(getDefaultOverviewSettings()));
         if (type === "bm-identifier") localStorage.setItem("BME_IDENTIFIER_SETTINGS", JSON.stringify(getDefaultIdentifierSettings()));
         if (type === "bm-sidebar") localStorage.setItem("BME_SIDEBAR_SETTINGS", JSON.stringify(getDefaultSidebarSettings()));
+        if (type === "bm-bans") localStorage.setItem("BME_BAN_PAGE_SETTINGS", JSON.stringify(getDefaultBanPageSettings()));
 
         location.reload();
     })
@@ -951,6 +1383,7 @@ export function checkAndSetupSettingsIfMissing() {
     checkIdentifierSettings();
     checkBmInfoSettings();
     checkSidebarSettings();
+    checkBanPageSettings();
 }
 
 function checkOverviewSettings() {
@@ -1111,7 +1544,7 @@ function getDefaultSidebarSettings() {
     settings.historicFriends.spot = "right-slot-3"
     settings.historicFriends.seenOnOrigin = "#263434"
     settings.historicFriends.seenOnFriend = "#343426"
-    
+
     settings.currentTeam = {};
     settings.currentTeam.enabled = false;
     settings.currentTeam.spot = "left-slot-1";
@@ -1121,10 +1554,38 @@ function getDefaultSidebarSettings() {
     settings.friendComparator.spot = "right-slot-1";
     settings.friendComparator.color = "#ffffff"
 
-    
+
     settings.publicBans = {}
     settings.publicBans.enabled = false;
     settings.publicBans.spot = "left-slot-2";
+
+    return settings;
+}
+function checkBanPageSettings() {
+    try {
+        const settings = JSON.parse(localStorage.getItem("BME_BAN_PAGE_SETTINGS"));
+        if (typeof (settings.selectLastServer) !== "boolean") throw new Error("Settings error");
+        if (typeof (settings.presets) !== "object") throw new Error("Settings error");
+        if (typeof (settings.presets.enabled) !== "boolean") throw new Error("Settings error");
+        if (typeof (settings.presets.pasteEvidenceIfEmpty) !== "boolean") throw new Error("Settings error");
+        if (typeof (settings.presets.setupBansAfterFirst) !== "boolean") throw new Error("Settings error");
+        if (typeof (settings.presets.spot) !== "string") throw new Error("Settings error");
+        if (typeof (settings.presets.items) !== "object") throw new Error("Settings error");
+    } catch (error) {
+        const defaultSettings = getDefaultBanPageSettings();
+        localStorage.setItem("BME_BAN_PAGE_SETTINGS", JSON.stringify(defaultSettings));
+    }
+}
+function getDefaultBanPageSettings() {
+    const settings = {};
+
+    settings.selectLastServer = true;
+    settings.presets = {};
+    settings.presets.enabled = false;
+    settings.presets.pasteEvidenceIfEmpty = true;
+    settings.presets.setupBansAfterFirst = true;
+    settings.presets.spot = "right-slot-1";
+    settings.presets.items = [];
 
     return settings;
 }

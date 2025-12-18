@@ -35,17 +35,29 @@ async function main(url) {
     checkAndSetupSettingsIfMissing();
 
     const urlArray = url.split("/");
+    if (urlArray[4] === "players") { //PLAYER PAGE
+        if (!urlArray[5]) return; //Search page
 
-    if (urlArray[4] && urlArray[4] !== "players") return; //Not player page
-    if (!urlArray[5]) return; //Search page
+        const bmId = urlArray[5];
+        if (isNaN(Number(bmId))) return;
 
-    const bmId = urlArray[5];
-    if (isNaN(Number(bmId))) return;
+        setupCacheFor(bmId, "RCON_PROFILE");
 
-    if (!cache[bmId]) setupCacheFor(bmId);
+        if (!urlArray[6]) onOverviewPage(bmId);
+        if (urlArray[6] === "identifiers") onIdentifierPage(bmId)
+    } else if (urlArray[4] === "bans" && urlArray[5]?.startsWith("add?player=")) { //BANS PAGE
+        if (!urlArray[5]?.startsWith("add?player=")) return;
+        
+        const bmId = urlArray[5].split("=")[1];
+        if (!bmId) return;
 
-    if (!urlArray[6]) onOverviewPage(bmId);
-    if (urlArray[6] && urlArray[6] === "identifiers") onIdentifierPage(bmId, cache[bmId].bmProfile, cache[bmId].steamData, cache[bmId].bmActivity)
+        setupCacheFor(bmId, "BAN_PAGE");
+
+        onAddBanPage(bmId);
+    }else{
+        const elementsToRemove = document.querySelectorAll(".bme-sidebar");
+        elementsToRemove.forEach(item => item.remove())
+    }
 }
 
 async function onOverviewPage(bmId) {
@@ -59,7 +71,10 @@ async function onOverviewPage(bmId) {
     } = await import(chrome.runtime.getURL('./modules/display.js'));
 
     const playerCache = cache[bmId];
-    sidebar(bmId, playerCache)
+    
+    const sidebarSettings = JSON.parse(localStorage.getItem("BME_SIDEBAR_SETTINGS"));
+    if (!sidebarSettings) return console.error(`BME-EXTRA: Sidebar settings are missing!`)
+    sidebar(bmId, playerCache, sidebarSettings)
 
     displaySettingsButton();
     if (settings.showAlert) displayAlertLink(bmId);
@@ -82,9 +97,11 @@ async function onIdentifierPage(bmId) {
         displayAvatars
     } = await import(chrome.runtime.getURL('./modules/display.js'));
 
-
     const playerCache = cache[bmId];
-    sidebar(bmId, playerCache)
+
+    const sidebarSettings = JSON.parse(localStorage.getItem("BME_SIDEBAR_SETTINGS"));
+    if (!sidebarSettings) return console.error(`BME-EXTRA: Sidebar settings are missing!`)
+    sidebar(bmId, playerCache, sidebarSettings)
 
     if (settings.showAvatar) displayAvatar(bmId, playerCache.bmProfile, playerCache.steamData);
     if (settings.showIspAndAsnData) showExtraDataOnIps(bmId, playerCache.bmProfile)
@@ -93,125 +110,176 @@ async function onIdentifierPage(bmId) {
 
     swapBattleEyeGuid(bmId, playerCache.bmProfile);
 }
-async function sidebar(bmId, playerCache) {
-    const settings = JSON.parse(localStorage.getItem("BME_SIDEBAR_SETTINGS"));
-    if (!settings) return console.error(`BME-EXTRA: Sidebar settings are missing!`)
+async function onAddBanPage(bmId) {
+    const settings = JSON.parse(localStorage.getItem("BME_BAN_PAGE_SETTINGS"))
+    if (!settings) return console.error(`BM-EXTRA: Main settings are missing!`);
 
+    const playerCache = cache[bmId];
+    sidebar(bmId, playerCache, settings);
+
+    const { selectLastServer } = await import(chrome.runtime.getURL('./modules/display.js'));
+
+    if (settings.selectLastServer) selectLastServer(bmId, playerCache.bmProfile);
+}
+async function sidebar(bmId, playerCache, settings) {
     const {
         insertSidebars, insertFriendsSidebarElement,
         insertHistoricFriendsSidebarElement, insertTeaminfoSidebarElement,
-        insertPublicBansSidebarElement, insertFriendComparator
-    } = await import(chrome.runtime.getURL('./modules/sidebar.js'));
+        insertPublicBansSidebarElement, insertFriendComparator, insertBanPresets
+    } = await import(chrome.runtime.getURL('./modules/sidebar.js'));    
 
     await insertSidebars();
-    if (settings.friendComparator.enabled) insertFriendComparator();
-    if (settings.friends.enabled) insertFriendsSidebarElement(playerCache.steamFriends, cache.connectedPlayersData, cache.connectedPlayersBanData, playerCache.serverPop, settings);
-    if (settings.historicFriends.enabled) insertHistoricFriendsSidebarElement(playerCache.historicFriends, playerCache.steamFriends, cache.connectedPlayersData, cache.connectedPlayersBanData, playerCache.serverPop, settings);
-    if (settings.currentTeam.enabled) insertTeaminfoSidebarElement(playerCache.team, cache.connectedPlayersData, cache.connectedPlayersBanData, settings);
-    if (settings.publicBans.enabled) insertPublicBansSidebarElement(playerCache.publicBans);
+    if (settings.friendComparator?.enabled) insertFriendComparator();
+    if (settings.friends?.enabled) insertFriendsSidebarElement(playerCache.steamFriends, cache.connectedPlayersData, cache.connectedPlayersBanData, playerCache.serverPop, settings);
+    if (settings.historicFriends?.enabled) insertHistoricFriendsSidebarElement(playerCache.historicFriends, playerCache.steamFriends, cache.connectedPlayersData, cache.connectedPlayersBanData, playerCache.serverPop, settings);
+    if (settings.currentTeam?.enabled) insertTeaminfoSidebarElement(playerCache.team, cache.connectedPlayersData, cache.connectedPlayersBanData, settings);
+    if (settings.publicBans?.enabled) insertPublicBansSidebarElement(playerCache.publicBans);
+
+    if (settings.presets?.enabled) insertBanPresets(settings, playerCache.bmProfile);
 }
 
 
-function setupCacheFor(bmId) {
+async function setupCacheFor(bmId, cacheType) {
+    if (!cache[bmId]) cache[bmId] = {};
+
     const authToken = {};
     authToken.external = localStorage.getItem("BME_BATTLEMETRICS_API_KEY");
+    const { getAuthToken} = await import(chrome.runtime.getURL('./modules/misc.js'));
     authToken.internal = getAuthToken();
+    if (!authToken.external && !authToken.internal) return console.error("BM-EXTRA: Missing authToken!");
 
-    if (!authToken) return;
+    if (cacheType === "RCON_PROFILE") setupPlayerCache(bmId, authToken);
+    if (cacheType === "BAN_PAGE") setupBanCache(bmId, authToken)
+}
+function setupPlayerCache(bmId, authToken) {
     const settings = {}
     settings.overview = JSON.parse(localStorage.getItem("BME_OVERVIEW_SETTINGS"));
     settings.identifier = JSON.parse(localStorage.getItem("BME_IDENTIFIER_SETTINGS"));
     settings.sidebar = JSON.parse(localStorage.getItem("BME_SIDEBAR_SETTINGS"));
-
-    if (!cache[bmId]) cache[bmId] = {};
-    if (validate("bmProfile", settings))
+    
+    if (validate("bmProfile", settings, bmId))
         cache[bmId].bmProfile = getBmProfileData(bmId, authToken);
 
-    if (validate("rustPremium", settings))
+    if (validate("rustPremium", settings, bmId))
         cache[bmId].rustPremium = getRustPremiumStatus(cache[bmId].bmProfile);
 
-    if (validate("steamFriends", settings))
+    if (validate("steamFriends", settings, bmId))
         cache[bmId].steamFriends = getSteamFriends(cache[bmId].bmProfile, "steam");
 
-    cache[bmId].historicFriends = {}
-    if (validate("historicFriends", settings))
+    if (!cache[bmId].historicFriends) cache[bmId].historicFriends = {}
+    if (validate("historicFriends", settings, bmId))
         cache[bmId].historicFriends.rustApi = getSteamFriends(cache[bmId].bmProfile, "rust-api");
 
-    cache[bmId].identifiers = {}
-    if (validate("steamAvatars", settings))
+    
+    if (!cache[bmId].identifiers) cache[bmId].identifiers = {}
+    if (validate("steamAvatars", settings, bmId))
         cache[bmId].identifiers.avatars = getSteamAvatars(cache[bmId].bmProfile);
 
-    if (validate("currentTeam", settings))
+    if (validate("currentTeam", settings, bmId))
         cache[bmId].team = getCurrentTeam(cache[bmId].bmProfile, authToken);
 
-    if (validate("publicBans", settings))
+    if (validate("publicBans", settings, bmId))
         cache[bmId].publicBans = getPublicBans(cache[bmId].bmProfile);
-        //cache.historicFriends.steamidCom
-        //cache.historicFriends.steamidUk
+    //cache.historicFriends.steamidCom
+    //cache.historicFriends.steamidUk
 
-    if (validate("bmActivity", settings))
+    if (validate("bmActivity", settings, bmId))
         cache[bmId].bmActivity = getBmActivity(bmId, authToken);
 
-    if (validate("steamData", settings))
+    if (validate("steamData", settings, bmId))
         cache[bmId].steamData = getSteamData(bmId);
 
-    if (validate("bmBanData", settings))
+    if (validate("bmBanData", settings, bmId))
         cache[bmId].bmBanData = getBmBanData(bmId, authToken);
 
-    if (validate("serverPop", settings))
+    if (validate("serverPop", settings, bmId))
         cache[bmId].serverPop = getCurrentServersPopulation(cache[bmId].bmProfile, authToken)
 
     loadPlayerData(cache[bmId].steamFriends, cache[bmId].historicFriends.rustApi, cache[bmId].team);
+
 }
-function validate(section, { overview, identifier, sidebar }) {
-    if (section === "bmProfile") {
-        if (overview.showServer) return true;
-        if (overview.showInfoPanel) return true;
-        if (overview.showAvatar) return true;
-        if (overview.swapBattleEyeGuid) return true;
-        if (identifier.showAvatar) return true;
-        if (identifier.showIspAndAsnData) return true;
+function setupBanCache(bmId, authToken) {
+    const settings = {}
+    settings.banPage = JSON.parse(localStorage.getItem("BME_BAN_PAGE_SETTINGS"));
+
+    if (validate("bmProfile", settings, bmId))
+        cache[bmId].bmProfile = getBmProfileData(bmId, authToken);
+
+}
+function validate(section, { overview, identifier, sidebar, banPage }, bmId) {
+    if (section === "bmProfile") {     
+        if (cache[bmId]?.bmProfile !== undefined) return false;
+        
+        if (banPage?.selectLastServer) return true;
+        if (banPage?.presets?.enabled) return true;
+
+        if (overview?.showServer) return true;
+        if (overview?.showInfoPanel) return true;
+        if (overview?.showAvatar) return true;
+        if (overview?.swapBattleEyeGuid) return true;
+        if (identifier?.showAvatar) return true;
+        if (identifier?.showIspAndAsnData) return true;
 
         //Indirect
-        if (identifier.displayAvatars) return true;
-        if (sidebar.currentTeam.enabled) return true;
-        if (sidebar.friends.enabled) return true;
-        if (sidebar.historicFriends.enabled) return true;
-        if (sidebar.publicBans.enabled) return true;
-        
+        if (identifier?.displayAvatars) return true;
+        if (sidebar?.currentTeam.enabled) return true;
+        if (sidebar?.friends.enabled) return true;
+        if (sidebar?.historicFriends.enabled) return true;
+        if (sidebar?.publicBans.enabled) return true;
+
     } else if (section === "rustPremium") {
-        if (overview.showInfoPanel) return true;
+        if (cache[bmId]?.rustPremium !== undefined) return false;
+
+        if (overview?.showInfoPanel) return true;
 
     } else if (section === "steamFriends") {
-        if (sidebar.friends.enabled) return true;
-        if (sidebar.historicFriends.enabled) return true;
+        if (cache[bmId]?.steamFriends !== undefined) return false;
+
+        if (sidebar?.friends.enabled) return true;
+        if (sidebar?.historicFriends.enabled) return true;
 
     } else if (section === "historicFriends") {
-        if (sidebar.historicFriends.enabled) return true;
+        if (cache[bmId]?.historicFriends.rustApi !== undefined) return false;
 
-    } else if (section === "steamAvatars") {
-        if (identifier.displayAvatars) return true;
+        if (sidebar?.historicFriends.enabled) return true;
+
+    } else if (section === "steamAvatars") {        
+        if (cache[bmId]?.identifiers?.avatars !== undefined) return false;
+
+        if (identifier?.displayAvatars) return true;
 
     } else if (section === "currentTeam") {
-        if (sidebar.currentTeam.enabled) return true;
+        if (cache[bmId]?.team !== undefined) return false;
+
+        if (sidebar?.currentTeam.enabled) return true;
 
     } else if (section === "publicBans") {
-        if (sidebar.publicBans.enabled) return true;
+        if (cache[bmId]?.publicBans !== undefined) return false;
+
+        if (sidebar?.publicBans.enabled) return true;
 
     } else if (section === "bmActivity") {
-        if (overview.showInfoPanel) return true;
+        if (cache[bmId]?.bmActivity !== undefined) return false;
+
+        if (overview?.showInfoPanel) return true;
 
     } else if (section === "steamData") {
-        if (overview.showAvatar) return true;
-        if (overview.showInfoPanel) return true;
-        if (identifier.showAvatar) return true;
+        if (cache[bmId]?.steamData !== undefined) return false;
+
+        if (overview?.showAvatar) return true;
+        if (overview?.showInfoPanel) return true;
+        if (identifier?.showAvatar) return true;
 
     } else if (section === "bmBanData") {
-        if (overview.advancedBans) return true;
+        if (cache[bmId]?.bmBanData !== undefined) return false;
+
+        if (overview?.advancedBans) return true;
 
     } else if (section === "serverPop") {
-        if (sidebar.friends.enabled) return true;
-        if (sidebar.historicFriends.enabled) return true;
+        if (cache[bmId]?.serverPop !== undefined) return false;
+
+        if (sidebar?.friends.enabled) return true;
+        if (sidebar?.historicFriends.enabled) return true;
 
     }
 
@@ -219,6 +287,7 @@ function validate(section, { overview, identifier, sidebar }) {
 }
 async function getSteamData(bmId) {
     try {
+        const { getAuthToken } = await import(chrome.runtime.getURL('./modules/misc.js'));
         const authToken = getAuthToken(); //Can only be accessed via an internal token
         if (!authToken) return console.error(`BME-EXTRA: Missing auth token.`);
 
@@ -251,7 +320,7 @@ async function getRustPremiumStatus(bmProfile) {
     if (!steamId) return;
 
     const value = await getRustPremiumStatusFromFacepunch(steamId);
-    if (typeof(value) === "string") return null;
+    if (typeof (value) === "string") return null;
     return value.premium;
 }
 async function getRustPremiumStatusFromFacepunch(steamId) {
@@ -319,19 +388,26 @@ async function loadPlayerData(friends, historicFriends, team) {
     historicFriends = await historicFriends;
     team = await team;
 
-    const uniqueSteamIds = [];    
+    const uniqueSteamIds = [];
 
     if (typeof (friends) === "object" && friends)
         friends.forEach(friend => { if (!uniqueSteamIds.includes(friend.steamId)) uniqueSteamIds.push(friend.steamId) });
     if (typeof (historicFriends) === "object" && historicFriends)
         historicFriends.forEach(friend => { if (!uniqueSteamIds.includes(friend.steamId)) uniqueSteamIds.push(friend.steamId) });
 
-    if (typeof(team) === "object" && team?.members) 
+    if (typeof (team) === "object" && team?.members)
         team.members.forEach(member => { if (!uniqueSteamIds.includes(member.steamId)) uniqueSteamIds.push(member.steamId) });
 
-    for (let i = 0; i < uniqueSteamIds.length; i += 100) {
-        requestAndProcessPlayerData(uniqueSteamIds.slice(i, i + 100));
-        requestAndProcessPlayerBanData(uniqueSteamIds.slice(i, i + 100));
+    const currentPlayerData = connectedPlayersData.map(item => item.steamId);    
+    const waitingForPlayerData = uniqueSteamIds.filter(item => !currentPlayerData.includes(item));
+    for (let i = 0; i < waitingForPlayerData.length; i += 100) {
+        requestAndProcessPlayerData(waitingForPlayerData.slice(i, i + 100));
+    }
+    
+    const currentPlayerBanData = connectedPlayersBanData.map(item => item.steamId);
+    const waitingForPlayerBanData = uniqueSteamIds.filter(item => !currentPlayerBanData.includes(item));
+    for (let i = 0; i < waitingForPlayerBanData.length; i += 100) {
+        requestAndProcessPlayerBanData(waitingForPlayerBanData.slice(i, i + 100));
     }
 }
 async function requestAndProcessPlayerData(players) {
@@ -396,7 +472,9 @@ async function getCurrentServersPopulation(bmProfile, authToken) {
     bmProfile = await bmProfile;
 
     const token = authToken.external ? authToken.external : authToken.internal;
-    const lastServer = await getLastServer(bmProfile, token)
+
+    const { getLastServer } = await import(chrome.runtime.getURL('./modules/misc.js')); 
+    const lastServer = await getLastServer(bmProfile)
     if (!lastServer?.online) return [];
 
     const resp = await fetch(`https://api.battlemetrics.com/servers/${lastServer.id}?version=^0.1.0&include=identifier,player&access_token=${token}`)
@@ -488,10 +566,11 @@ async function getCurrentTeam(bmProfile, authToken) {
 
         bmProfile = await bmProfile;
 
-        const lastServer = await getLastServer(bmProfile, token, true);
-        if (lastServer === null || lastServer.lastPlayed < (Date.now()-2*24*60*60*1000))
-             return { teamId: -1, members: [], server: "", raw: "No server available!" };
-        
+        const { getLastServer } = await import(chrome.runtime.getURL('./modules/misc.js')); 
+        const lastServer = await getLastServer(bmProfile, true);
+        if (lastServer === null || lastServer.lastPlayed < (Date.now() - 2 * 24 * 60 * 60 * 1000))
+            return { teamId: -1, members: [], server: "", raw: "No server available!" };
+
         const steamId = getSteamIdFromBmProfile(bmProfile)
 
         let rawTeaminfo = "";
@@ -518,7 +597,7 @@ async function getCurrentTeam(bmProfile, authToken) {
             }
             if (!line.includes("76561")) return;
             const memberSteamId = line.substring(0, 17);
-            
+
             teamMembers.push({ steamId: memberSteamId, online: line[onlineIndex] === "x", leader: line[leaderIndex] === "x" });
         })
 
@@ -645,66 +724,4 @@ async function requestPublicBansFor(steamId) {
 function getSteamIdFromBmProfile(bmProfile) {
     const steamIdObject = bmProfile.included.find(identifier => identifier?.attributes?.type === "steamID");
     return steamIdObject?.attributes?.identifier;
-}
-function getAuthToken() {
-    const authElement = document.getElementById("oauthToken");
-    if (!authElement) {
-        console.error("BM-EXTRA: Auth element wasn't found.")
-        return null;
-    }
-    const authToken = authElement.innerText;
-    if (!authToken) {
-        console.error("BM-EXTRA: Auth Token is missing.")
-        return null;
-    }
-
-    return authToken;
-}
-async function getMyServers(token) {
-    let myServers = JSON.parse(localStorage.getItem("BME_MY_SERVER_CACHE"));
-    if (myServers && myServers.timestamp > Date.now() - 24 * 60 * 60 * 1000) return myServers.servers;
-
-    const resp = await fetch(`https://api.battlemetrics.com/servers?version=^0.1.0&filter[rcon]=true&page[size]=100&access_token=${token}`)
-    if (resp?.status !== 200) {
-        console.error(`Failed to request your servers | Status: ${resp?.status}`);
-        return null;
-    }
-
-    const data = await resp.json();
-    myServers = {
-        timestamp: Date.now(),
-        servers: data.data.map(server => server.id)
-    }
-
-    localStorage.setItem("BME_MY_SERVER_CACHE", JSON.stringify(myServers))
-    return myServers.servers;
-}
-async function getLastServer(bmProfile, token, onlyMyServer) {
-    const myServers = await getMyServers(token);
-    if (!myServers) return null;
-
-    let servers = bmProfile.included
-        .filter(item => item.type === "server")
-        .map(server => {
-            return {
-                name: server.attributes?.name,
-                id: server.id,
-                orgId: server?.relationships?.organization?.data?.id,
-                lastPlayed: new Date(server.meta.lastSeen).getTime(),
-                online: server.meta.online,
-            }
-        })
-        .sort((a, b) => b.lastPlayed - a.lastPlayed);
-
-
-    if (onlyMyServer) {
-        servers = servers.filter(item => myServers.includes(item.id));
-        const lastServer = servers[0];
-        if (!lastServer) return null;
-        return lastServer;
-    }
-
-    const lastServer = servers[0];
-    if (!lastServer) return null;
-    return lastServer
 }
