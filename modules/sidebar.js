@@ -631,7 +631,8 @@ async function banPresetButtonClicked(preset, bmProfile, pasteEvidence) {
         if (banDuration != -1) {
             const ONE_DAY = 24 * 60 * 60 * 1000;
             const timestamp = Date.now() + (ONE_DAY * Number(banDuration))
-            const timeString = getBanDurationString(timestamp);
+            const locale = JSON.parse(document.getElementById("storeBootstrap").innerHTML)?.state?.account?.locale ?? "en-us";
+            const timeString = getBanDurationString(timestamp, locale);
 
             setNativeValue(banDurationInput, timeString, true)
         } else {
@@ -650,7 +651,7 @@ async function banPresetButtonClicked(preset, bmProfile, pasteEvidence) {
     if (rich && pasteEvidence) {
         const banNote = await getElementWhenAppears("tiptap", true);
         if (banNote.innerText.trim() !== "") return;
-        
+
         const data = new DataTransfer();
         data.setData("text/html", rich.value);
 
@@ -670,7 +671,7 @@ async function readClipboardRich() {
             const value = await blob.text();
             return { type: "text/html", value: stripGyazoImgLink(value) };
         }
-        
+
         if (item.types.includes("text/plain")) {
             const blob = await item.getType("text/plain");
             const value = await blob.text();
@@ -692,7 +693,7 @@ function stripGyazoImgLink(html) {
             item.remove();
             if (childNodes[i + 1]?.nodeName === "BR") childNodes[i + 1].remove()
         }
-    }    
+    }
     return doc.innerHTML;
 }
 async function getBanHeaderElement(type) {
@@ -708,17 +709,12 @@ async function getBanHeaderElement(type) {
         if (type === "banListSelector" && txt === "Ban List:") prime = true;
     }
 }
-function getBanDurationString(timestamp) {
-    const date = new Date(timestamp);
-
-    return (
-        `${pad(date.getDate())}/` +
-        `${pad(date.getMonth() + 1)}/` +
-        `${date.getFullYear()} ` +
-        `${pad(date.getHours())}:` +
-        `${pad(date.getMinutes())}`
-    );
-}
-function pad(str) {
-    return String(str).padStart(2, "0");
+function getBanDurationString(timestamp, locale = "en-us") {
+    return new Intl.DateTimeFormat(locale, {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "numeric",
+        minute: "2-digit",
+    }).format(new Date(timestamp));
 }
