@@ -1,4 +1,6 @@
 import { getMyServers, setNativeValue } from "./misc.js";
+import { getPcCacheSize } from "./page/cache.js";
+
 const ONE_DAY = 24 * 60 * 60 * 1000;
 const allSidebarSlots = [
     { value: "right-slot-1", display: "RIGHT 1" },
@@ -107,63 +109,62 @@ function getOverviewSettings() {
     const settingsBucket = "BME_OVERVIEW_SETTINGS";
     const settings = JSON.parse(localStorage.getItem(settingsBucket));
 
-    const showAvatarToggle = getToggleSettingsElement(
-        "Show avatar on page",
+    const showAvatar = getSettingsElement(
+        "toggle", "Show avatar on page",
         "Shows the players avatar when it's available next to his name",
         null, settingsBucket, "showAvatar", settings.showAvatar
     )
-    const showAlertToggle = getToggleSettingsElement(
-        "Show alert",
+    const showAlert = getSettingsElement(
+        "toggle", "Show alert",
         "Shows the button that redirects to add an alert to the player.",
         null, settingsBucket, "showAlert", settings.showAlert
     )
-    const showBmInfoPanel = getToggleSettingsElement(
-        "Show BM information",
+    const showBmInfo = getSettingsElement(
+        "toggle", "Show BM information",
         "Shows detailed information that is stored by battlemetrics and usually it is not visible by default",
         null, settingsBucket, "showInfoPanel", settings.showInfoPanel
     );
-    const removeSteamInfo = getToggleSettingsElement(
-        "Remove steam information",
+    const removeSteamInfo = getSettingsElement(
+        "toggle", "Remove steam information",
         "Remove the default Steam information panel from the battlemetrics RCON profile when it appears",
         null, settingsBucket, "removeSteamInfo", settings.removeSteamInfo,
     );
-    const showServer = getToggleSettingsElement(
-        "Show server",
+    const showServer = getSettingsElement(
+        "toggle", "Show server",
         "Show either the current or the last server the user has played on, as well as displaying connection details",
         null, settingsBucket, "showServer", settings.showServer
     )
-    const advancedBans = getToggleSettingsElement(
-        "Advanced bans",
+    const advancedBans = getSettingsElement(
+        "toggle", "Advanced bans",
         "Update ban reasons for a more readable format | May not properly work on other servers.",
         null, settingsBucket, "advancedBans", settings.advancedBans
     )
-    const closeAdminLog = getToggleSettingsElement(
-        "Close admin log",
+    const closeAdminLog = getSettingsElement(
+        "toggle", "Close admin log",
         "Close admin log by default when opening a battlemetrics profile.",
         null, settingsBucket, "closeAdminLog", settings.closeAdminLog
     )
-    const swapBattleEyeGuid = getToggleSettingsElement(
-        "Swap BattlEye GUID",
+    const swapBattleEyeGuid = getSettingsElement(
+        "toggle", "Swap BattlEye GUID",
         "Swap BattlEye GUID to the player's streamer mode name",
         ["SM Names"], settingsBucket, "swapBattleEyeGuid", settings.swapBattleEyeGuid
     )
-    const maxNamesOnProfile = getNumberSettingsElement(
-        "Maximum names:",
+    const maxNamesOnProfile = getSettingsElement(
+        "number", "Maximum names:",
         "The maximum number of names allowed to be showed in the overview section.",
         null, settingsBucket, "maxNames", settings.maxNames
     )
-    const maxIpsOnProfile = getNumberSettingsElement(
-        "Maximum IP addresses:",
+    const maxIpsOnProfile = getSettingsElement(
+        "number", "Maximum IP addresses:",
         "The maximum number of IP addresses allowed to be showed in the overview section.",
         null, settingsBucket, "maxIps", settings.maxIps
     )
     const resetButton = getResetButton("bm-overview");
 
     element.append(
-        showAvatarToggle, showAlertToggle, showBmInfoPanel, removeSteamInfo, showServer,
+        showAvatar, showAlert, showBmInfo, removeSteamInfo, showServer,
         advancedBans, closeAdminLog, swapBattleEyeGuid,
         maxNamesOnProfile, maxIpsOnProfile,
-
 
         resetButton
     );
@@ -181,43 +182,54 @@ function getIdentifierSettings() {
     const settingsBucket = "BME_IDENTIFIER_SETTINGS";
     const settings = JSON.parse(localStorage.getItem(settingsBucket));
 
-    const showAvatarToggle = getToggleSettingsElement(
-        "Show avatar on page",
+    const showAvatarToggle = getSettingsElement(
+        "toggle", "Show avatar on page",
         "Shows the players avatar when it's available next to his name",
         null, settingsBucket, "showAvatar", settings.showAvatar
     )
-    const showIspAsnData = getToggleSettingsElement(
-        "Show extra IP info",
+
+    const showExtraInfoSegment = document.createElement("div")
+    showExtraInfoSegment.classList.add("bme-settings-segment");
+
+    const showIspAsnData = getSettingsElement(
+        "toggle", "Show extra IP info",
         "Shows the name of the ISP and it's ASN on the IP addresses.",
-        null, settingsBucket, "showIspAndAsnData", settings.showIspAndAsnData
+        null, settingsBucket, "showIspAndAsnData", settings.showIspAndAsnData, { segment: showExtraInfoSegment }
     )
+
+    const showMore = getSettingsElement(
+        "toggle", "Show Proxycheck Info",
+        "Shows extra information beyond what you would normally see from proxycheck.io",
+        ["PROXYCHECK"], settingsBucket, "requestProxyCheck", settings.requestProxyCheck
+    )
+    showExtraInfoSegment.append(showMore);
 
     const vpnSegment = document.createElement("div")
     vpnSegment.classList.add("bme-settings-segment");
-    const highlightVpn = getToggleSettingsElement(
-        "Highlight VPNs",
+    const highlightVpn = getSettingsElement(
+        "toggle", "Highlight VPNs",
         "Highlights VPNs to make it easier to differentiate.",
         null, settingsBucket, "highlightVpn",
-        settings.highlightVpn, vpnSegment
+        settings.highlightVpn, { segment: vpnSegment }
     )
 
-    const removeVpnLabel = getToggleSettingsElement(
-        "Remove VPN label",
+    const removeVpnLabel = getSettingsElement(
+        "toggle", "Remove VPN label",
         "Removes the VPN labels from the identifiers.",
         null, settingsBucket, "removeVpnLabel", settings.removeVpnLabel
     )
-    const vpnAbove = getNumberSettingsElement(
-        "VPN connection requirement:",
+    const vpnAbove = getSettingsElement(
+        "number", "VPN connection requirement:",
         "The number of connections needed to classify the identifier as a VPN by default.",
         null, settingsBucket, "vpnAbove", settings.vpnAbove
     )
-    const vpnBgColor = getColorSettingsElement(
-        "VPN Background color:",
+    const vpnBgColor = getSettingsElement(
+        "color", "VPN Background color:",
         "Choose the background color of the VPN identifier element.",
         null, settingsBucket, "vpnBgColor", settings.vpnBgColor
     )
-    const vpnOpacity = getNumberSettingsElement(
-        "VPN Opacity:",
+    const vpnOpacity = getSettingsElement(
+        "number", "VPN Opacity:",
         "Choose the Level of Opacity that should be applied to the VPNs.<br />0 - transparent | 1 - fully visible",
         null, settingsBucket, "vpnOpacity", settings.vpnOpacity, { min: 0, max: 1 }
     )
@@ -226,15 +238,15 @@ function getIdentifierSettings() {
     const avatarsSegment = document.createElement("div")
     avatarsSegment.classList.add("bme-settings-segment");
 
-    const displayAvatars = getToggleSettingsElement(
-        "Display Avatars",
+    const displayAvatars = getSettingsElement(
+        "toggle", "Display Avatars",
         `Display the avatars as identifiers that the player used in the past. It will only work if the identifiers are sorted by "Type".`,
         ["RUST API - HA"], settingsBucket, "displayAvatars",
-        settings.displayAvatars, avatarsSegment
+        settings.displayAvatars, { segment: avatarsSegment }
     )
 
-    const zoomableAvatars = getToggleSettingsElement(
-        "Zoomable Avatars",
+    const zoomableAvatars = getSettingsElement(
+        "toggle", "Zoomable Avatars",
         "Make the Avatars grow to their full sizes so you can get a better view of them when hovered over.",
         null, settingsBucket, "zoomableAvatars", settings.zoomableAvatars
     )
@@ -242,8 +254,8 @@ function getIdentifierSettings() {
 
     const resetButton = getResetButton("bm-identifier")
     element.append(
-        showAvatarToggle, showIspAsnData, highlightVpn, vpnSegment,
-        displayAvatars, avatarsSegment,
+        showAvatarToggle, showIspAsnData, showExtraInfoSegment,
+        highlightVpn, vpnSegment, displayAvatars, avatarsSegment,
 
         resetButton,
     )
@@ -417,42 +429,40 @@ function getSidebarSettings() {
     const settingsBucket = "BME_SIDEBAR_SETTINGS";
     const settings = JSON.parse(localStorage.getItem(settingsBucket));
 
-
     const currentTeamSegment = document.createElement("div")
     currentTeamSegment.classList.add("bme-settings-segment");
 
-    const currentTeamEnabled = getToggleSettingsElement(
-        "Show Current Team",
+    const currentTeamEnabled = getSettingsElement(
+        "toggle", "Show Current Team",
         "Shows the current team of the player.",
         null, settingsBucket, "currentTeam-enabled",
-        settings.currentTeam.enabled, currentTeamSegment
+        settings.currentTeam.enabled, { segment: currentTeamSegment }
     )
 
-    const currentTeamSpot = getSwitchSettingsElement(
-        "Position:",
+    const currentTeamSpot = getSettingsElement(
+        "switch", "Position:",
         "Choose which sidebar spot should the current team be present.",
-        null, settingsBucket, "currentTeam-spot",
-        getSpotDisplay(settings.currentTeam.spot, allSidebarSlots), allSidebarSlots
+        null, settingsBucket, "currentTeam-spot", settings.currentTeam.spot, { options: allSidebarSlots }
     )
     currentTeamSegment.append(currentTeamSpot)
 
     const friendComparatorSegment = document.createElement("div")
     friendComparatorSegment.classList.add("bme-settings-segment");
 
-    const friendComparatorEnabled = getToggleSettingsElement(
-        "Player Comparator",
+    const friendComparatorEnabled = getSettingsElement(
+        "toggle", "Player Comparator",
         "Allows you to easily compare player's friendlist for common friends between them.",
         null, settingsBucket, "friendComparator-enabled",
-        settings.friendComparator.enabled, friendComparatorSegment
+        settings.friendComparator.enabled, { segment: friendComparatorSegment }
     )
 
-    const friendComparatorSpot = getSwitchSettingsElement(
-        "Position:",
+    const friendComparatorSpot = getSettingsElement(
+        "switch", "Position:",
         "Choose which sidebar spot should the player comparator be present.",
-        null, settingsBucket, "friendComparator-spot", getSpotDisplay(settings.friendComparator.spot, allSidebarSlots), allSidebarSlots
+        null, settingsBucket, "friendComparator-spot", settings.friendComparator.spot, { options: allSidebarSlots }
     )
-    const comparatorColor = getColorSettingsElement(
-        "Active Color:",
+    const comparatorColor = getSettingsElement(
+        "color", "Active Color:",
         "This color will be used to highlight the result of the comparison.",
         null, settingsBucket, "friendComparator-color", settings.friendComparator.color
     )
@@ -461,52 +471,52 @@ function getSidebarSettings() {
     const steamFriendsSegment = document.createElement("div")
     steamFriendsSegment.classList.add("bme-settings-segment");
 
-    const steamFriendsEnabled = getToggleSettingsElement(
-        "Show Friends",
+    const steamFriendsEnabled = getSettingsElement(
+        "toggle", "Show Friends",
         "Shows the current Steam Friends on the sidebar.",
         ["STEAM API KEY"], settingsBucket, "friends-enabled",
-        settings.friends.enabled, steamFriendsSegment
+        settings.friends.enabled, { segment: steamFriendsSegment }
     )
 
-    const steamFriendsSpot = getSwitchSettingsElement(
-        "Position:",
+    const steamFriendsSpot = getSettingsElement(
+        "switch", "Position:",
         "Choose which sidebar spot should the Steam Friends be present.",
-        null, settingsBucket, "friends-spot", getSpotDisplay(settings.friends.spot, allSidebarSlots), allSidebarSlots
+        null, settingsBucket, "friends-spot", settings.friends.spot, { options: allSidebarSlots }
     )
-    const steamFriendsShowOnline = getToggleSettingsElement(
-        "Highlight online friends",
+    const steamFriendsShowOnline = getSettingsElement(
+        "toggle", "Highlight online friends",
         "Highlights the online friends that are on the same server.",
         null, settingsBucket, "friends-showOnline", settings.friends.showOnline
     )
-    const steamFriendsOnlineColor = getColorSettingsElement(
-        "Online friends border color:",
+    const steamFriendsOnlineColor = getSettingsElement(
+        "color", "Online friends border color:",
         "Choose the color the online friends supposed to be highlighted with.",
         null, settingsBucket, "friends-onlineColor", settings.friends.onlineColor
     )
     steamFriendsSegment.append(steamFriendsSpot, steamFriendsShowOnline, steamFriendsOnlineColor)
-    
+
     const historicFriendsSegment = document.createElement("div")
     historicFriendsSegment.classList.add("bme-settings-segment");
 
-    const historicFriendsEnabled = getToggleSettingsElement(
-        "Show Historic Friends",
+    const historicFriendsEnabled = getSettingsElement(
+        "toggle", "Show Historic Friends",
         "Show Historic Friends on the sidebar",
         ["RUST API - HF"], settingsBucket, "historicFriends-enabled",
-        settings.historicFriends.enabled, historicFriendsSegment
+        settings.historicFriends.enabled, { segment: historicFriendsSegment }
     )
 
-    const historicFriendsSpot = getSwitchSettingsElement(
-        "Position:",
+    const historicFriendsSpot = getSettingsElement(
+        "switch", "Position:",
         "Choose which sidebar spot should the Historic Friends be present.",
-        null, settingsBucket, "historicFriends-spot", getSpotDisplay(settings.historicFriends.spot, allSidebarSlots), allSidebarSlots
+        null, settingsBucket, "historicFriends-spot", settings.historicFriends.spot, { options: allSidebarSlots }
     )
-    const seenOnOrigin = getColorSettingsElement(
-        "Seen On Origin:",
+    const seenOnOrigin = getSettingsElement(
+        "color", "Seen On Origin:",
         "Choose the background color of the friends who were seen on the origin",
         null, settingsBucket, "historicFriends-seenOnOrigin", settings.historicFriends.seenOnOrigin
     )
-    const seenOnFriend = getColorSettingsElement(
-        "Seen On Friend:",
+    const seenOnFriend = getSettingsElement(
+        "color", "Seen On Friend:",
         "Choose the background color of the friends who were seen on the friend alone",
         null, settingsBucket, "historicFriends-seenOnFriend", settings.historicFriends.seenOnFriend
     )
@@ -515,17 +525,17 @@ function getSidebarSettings() {
     const publicBansSegment = document.createElement("div")
     publicBansSegment.classList.add("bme-settings-segment");
 
-    const publicBansEnabled = getToggleSettingsElement(
-        "Show Public bans",
+    const publicBansEnabled = getSettingsElement(
+        "toggle", "Show Public bans",
         "Shows the Public Bans on the sidebar",
         ["RUST API - PB"], settingsBucket, "publicBans-enabled",
-        settings.publicBans.enabled, publicBansSegment
+        settings.publicBans.enabled, { segment: publicBansSegment }
     )
 
-    const publicBansSpot = getSwitchSettingsElement(
-        "Position:",
+    const publicBansSpot = getSettingsElement(
+        "switch", "Position:",
         "Choose which sidebar spot should the public bans be present.",
-        null, settingsBucket, "publicBans-spot", getSpotDisplay(settings.publicBans.spot, allSidebarSlots), allSidebarSlots
+        null, settingsBucket, "publicBans-spot", settings.publicBans.spot, { options: allSidebarSlots }
     )
     publicBansSegment.append(publicBansSpot)
 
@@ -558,37 +568,36 @@ function getBanPageSettings() {
     const settingsBucket = "BME_BAN_PAGE_SETTINGS";
     const settings = JSON.parse(localStorage.getItem(settingsBucket));
 
-    const selectLastServer = getToggleSettingsElement(
-        "Select Last Server",
+    const selectLastServer = getSettingsElement(
+        "toggle", "Select Last Server",
         "Automatically selects the last server if it's present on your server list.",
         null, settingsBucket, "selectLastServer", settings.selectLastServer
     )
-    
+
     const banPresetsSegment = document.createElement("div")
     banPresetsSegment.classList.add("bme-settings-segment");
-    
-    const banPresetsEnabled = getToggleSettingsElement(
-        "Enable Ban Presets",
+
+    const banPresetsEnabled = getSettingsElement(
+        "toggle", "Enable Ban Presets",
         "Allows you to create ban presets that you can activate with one click on the sidebar.",
         null, settingsBucket, "presets-enabled",
-        settings.presets.enabled, banPresetsSegment
+        settings.presets.enabled, { segment: banPresetsSegment }
     )
 
-    const banPresetSidebarSpot = getSwitchSettingsElement(
-        "Position:",
+    const banPresetSidebarSpot = getSettingsElement(
+        "switch", "Position:",
         "Choose which sidebar spot should the ban presets be present",
-        null, settingsBucket, "presets-spot", getSpotDisplay(settings.presets.spot, banSidebarSlots),
-        banSidebarSlots
+        null, settingsBucket, "presets-spot", settings.presets.spot, { options: banSidebarSlots }
     )
 
-    const setupBansAfterFirst = getToggleSettingsElement(
-        "Chain Bans",
+    const setupBansAfterFirst = getSettingsElement(
+        "toggle", "Chain Bans",
         "If you used a preset, the rest of the bans you open will automatically invoke the same preset.",
         null, settingsBucket, "presets-setupBansAfterFirst", settings.presets.setupBansAfterFirst
     );
 
-    const copyEvidence = getToggleSettingsElement(
-        "Use Clipboard For Evidence",
+    const copyEvidence = getSettingsElement(
+        "toggle", "Use Clipboard For Evidence",
         "It will paste the default content of your clipboard if the ban note is empty.",
         null, settingsBucket, "presets-pasteEvidenceIfEmpty", settings.presets.pasteEvidenceIfEmpty
     )
@@ -675,7 +684,7 @@ function getNewPresetCreatorElement(orgData) {
     element.append(nameInput);
 
     const colorInput = document.createElement("input");
-    colorInput.value = "#151515";
+    colorInput.value = "#d2d2d2";
     colorInput.classList.add("bme-preset-color-settings")
     colorInput.type = "color";
     element.append(colorInput)
@@ -958,22 +967,86 @@ function getApiKeysSettings() {
     title.innerText = "API Keys";
     titleRow.appendChild(title);
 
-    const steamKeyElement = getApiKeyDiv("Steam API Key:", "BME_STEAM_API_KEY", "steam-api");
+    const steamKeyElement = getApiKeyDiv("Steam API Key:", "BME_STEAM_API_KEY", "steam-api", {
+        detail: `Key cam be generated at <a href="https://steamcommunity.com/dev/apikey" target="_blank">Steam Web API</a>.`
+    });
     const battleMetricsKeyElements = getApiKeyDiv("BattleMetrics API Key:", "BME_BATTLEMETRICS_API_KEY", "bm-api", {
-        optional: "OPTIONAL: Provided key will take priority, it isn't necessary."
+        detail: "OPTIONAL: Provided key will take priority, it isn't necessary."
     });
     const rustApiKeyElement = getApiKeyDiv("Rust API Key:", "BME_RUST_API_KEY", "rust-api");
+
+    const proxyCheckSegment = document.createElement("div")
+    proxyCheckSegment.classList.add("bme-settings-segment");
+    const proxyCheckApiKeyElement = getApiKeyDiv("Proxycheck API KEY:", "BME_PROXY_CHECK_SETTINGS", "proxy-check", {
+        segment: proxyCheckSegment,
+        detail: `Key cam be generated at <a href="https://proxycheck.io/" target="_blank">proxycheck.io</a>.`
+    });
+
+    const settingsBucket = "BME_PROXY_CHECK_SETTINGS";
+    const settings = JSON.parse(localStorage.getItem(settingsBucket));
+
+    const maxIps = getSettingsElement(
+        "number", "Maximum IPs",
+        "The maximum number of IPs to request for one player",
+        null, settingsBucket, "maxIps", settings.maxIps
+    )
+    const proxyPriority = getSettingsElement(
+        "toggle", "Proxychecker priority",
+        "Prioritize proxychecker data if ISP/ASN is mismatched from BM",
+        null, settingsBucket, "proxyPriority", settings.proxyPriority
+    )
+
+    const pcIpDurations = [
+        { display: "Last 1 day", value: 86400000 },
+        { display: "Last 15 days", value: 1296000000 },
+        { display: "Last 1 Months", value: 2592000000 },
+        { display: "Last 2 Months", value: 5184000000 },
+        { display: "Last 3 Months", value: 7776000000 },
+        { display: "Last Year", value: 31536000000 },
+        { display: "Forever", value: -1 },
+    ]
+    const checkIpsNewerThan = getSettingsElement(
+        "select", "Recent IPs",
+        "Only check IPs that have been used in the selected time period",
+        null, settingsBucket, "checkAfter", settings.checkAfter, { options: pcIpDurations }
+    )
+
+    const currentCacheSize = getPcCacheSize();
+    const ignoreKnownVpns = getSettingsElement(
+        "toggle", "Ignore Known VPNs",
+        "Do not request known VPNs from proxycheck.io",
+        null, settingsBucket, "ignoreKnownVpns", settings.ignoreKnownVpns
+    )
+
+    const keepCache = getSettingsElement(
+        "toggle", "Keep Cache",
+        `Keep proxycheck data for 24 hours, in order if you reopen a player don't waste resources with requesting the necessary data again. Your current cache has ${currentCacheSize} items.`,
+        null, settingsBucket, "keepCache", settings.keepCache
+    )
+
+    proxyCheckSegment.append(
+        proxyPriority, maxIps, checkIpsNewerThan, ignoreKnownVpns, keepCache
+    );
+
     const smUpdater = getSmUpdater();
 
-    element.append(steamKeyElement, battleMetricsKeyElements, rustApiKeyElement, smUpdater);
+    element.append(
+        steamKeyElement, battleMetricsKeyElements, rustApiKeyElement,
+        proxyCheckApiKeyElement, proxyCheckSegment, smUpdater
+    );
 
 
     return element;
 }
-function getApiKeyDiv(titleText, value, id, meta) {
+function getApiKeyDiv(titleText, storageName, id, meta) {
     const container = document.createElement("div");
     container.classList.add("bme-settings-key-container")
-    const currentKey = localStorage.getItem(value);
+    const currentKey =
+        storageName === "BME_PROXY_CHECK_SETTINGS" ?
+            JSON.parse(localStorage.getItem(storageName))?.apiKey :
+            localStorage.getItem(storageName);
+
+    if (meta?.segment && !currentKey) meta.segment.classList.add("bme-inactive-segment");
 
     const title = document.createElement("h3")
     title.innerText = titleText;
@@ -1002,17 +1075,27 @@ function getApiKeyDiv(titleText, value, id, meta) {
         const newKey = input.value;
         input.value = "";
 
-        localStorage.setItem(value, newKey);
+        if (storageName === "BME_PROXY_CHECK_SETTINGS") {
+            const currentSettings = JSON.parse(localStorage.getItem(storageName));
+            currentSettings.apiKey = newKey;
+            localStorage.setItem(storageName, JSON.stringify(currentSettings));
+        } else {
+            localStorage.setItem(storageName, newKey);
+        }
 
         const detailItem = document.getElementById(`${id}-key-detail`);
         detailItem.innerText = getKeyDetailContent(newKey);
+
+        if (!meta?.segment) return;
+        if (newKey) meta.segment.classList.remove("bme-inactive-segment");
+        else meta.segment.classList.add("bme-inactive-segment");
     })
 
-    if (meta?.optional) {
-        const optional = document.createElement("p")
-        optional.classList.add("bme-key-settings-optional")
-        optional.innerText = meta.optional;
-        container.appendChild(optional);
+    if (meta?.detail) {
+        const detail = document.createElement("p")
+        detail.classList.add("bme-key-settings-detail")
+        detail.innerHTML = meta.detail;
+        container.appendChild(detail);
     }
 
     return container;
@@ -1127,166 +1210,134 @@ function invokeChange(type) {
 }
 
 
-function getToggleSettingsElement(title, description, requirements, settingsBucket, settingsName, currentValue, segment) {
+function getSettingsElement(type, title, desc, req, bucket, key, value, meta) {
     const element = document.createElement("div");
-    element.className = "bme-settings-row";
-
-    const firstRow = document.createElement("div");
-
-    const input = document.createElement("input");
-    input.classList.add("bme-toggle-input")
-    input.type = "checkbox";
-    input.checked = currentValue;
-    if (segment && !currentValue) segment.classList.add("bme-inactive-segment");
-
-    input.addEventListener("change", e => {
-        setSettingTo(settingsBucket, settingsName, e.target.checked);
-
-        if (segment && !e.target.checked) segment.classList.add("bme-inactive-segment");
-        else if (segment && e.target.checked) segment.classList.remove("bme-inactive-segment");
-    })
-
-    const titleElement = document.createElement("h3");
-    titleElement.className = "bme-settings-title";
-    titleElement.textContent = title;
-    firstRow.append(input, titleElement)
-
-    const desc = document.createElement("p");
-    desc.className = "bme-settings-description";
-    desc.textContent = description;
-
-    element.append(firstRow, desc)
-
-    if (requirements) element.append(getRequirementsElement(requirements))
-    return element;
-}
-function getSwitchSettingsElement(title, description, requirements, settingsBucket, settingsName, currentValue, switchValues) {
-    const element = document.createElement("div");
-    element.className = "bme-settings-row";
+    element.classList.add("bme-settings-row");
 
     const firstRow = document.createElement("div");
 
     const titleElement = document.createElement("h3");
-    titleElement.className = "bme-settings-title";
+    titleElement.classList.add("bme-settings-title");
     titleElement.textContent = title;
 
-    const button = document.createElement("button");
-    button.innerText = currentValue;
-    firstRow.append(titleElement, button)
+    const inputElement = getInput(type, bucket, key, value, meta);
 
-    button.addEventListener("click", e => {
-        const index = switchValues.findIndex(item => item.display === e.target.innerText);
-        let nextValue = null;
-        if (switchValues[index + 1]) nextValue = switchValues[index + 1]
-        else nextValue = switchValues[0]
+    if (type === "toggle") firstRow.append(inputElement, titleElement)
+    else firstRow.append(titleElement, inputElement)
 
-        if (!nextValue) return;
-        e.target.innerText = nextValue.display;
-        setSettingTo(settingsBucket, settingsName, nextValue.value);
-    })
+    const descElement = document.createElement("p");
+    descElement.classList.add("bme-settings-description");
+    descElement.textContent = desc;
 
-    const desc = document.createElement("p");
-    desc.className = "bme-settings-description";
-    desc.textContent = description;
+    element.append(firstRow, descElement)
 
-    element.append(firstRow, desc)
-
-    if (requirements) {
-        const reqs = document.createElement("p");
-        reqs.classList.add("bme-settings-requirements");
-        reqs.innerText = `REQUIRED: ${requirements.join(" | ")}`;
-        element.append(reqs);
+    if (req) element.append(getRequirementsElement(req))
+    if (meta?.segment) {
+        if (Boolean(value)) meta.segment.classList.remove("bme-inactive-segment")
+        else meta.segment.classList.add("bme-inactive-segment")
     }
+
     return element;
 }
-function getNumberSettingsElement(title, description, requirements, settingsBucket, settingsName, currentValue, limit) {
-    const element = document.createElement("div");
-    element.className = "bme-settings-row";
-
-    const firstRow = document.createElement("div");
-
-    const titleElement = document.createElement("h3");
-    titleElement.className = "bme-settings-title";
-    titleElement.textContent = title;
-
+function getInput(type, bucket, key, value, meta) {
+    if (type === "toggle" || type === "number" || type === "color")
+        return getNormalInputElement(type, bucket, key, value, meta);
+    if (type === "switch")
+        return getSwitchInputElement(type, bucket, key, value, meta);
+    if (type === "select")
+        return getSelectInputElement(type, bucket, key, value, meta);
+}
+function getNormalInputElement(type, bucket, key, value, meta) {
     const input = document.createElement("input");
-    input.classList.add("bme-settings-number-input")
-    input.value = currentValue;
-    firstRow.append(titleElement, input)
+    input.classList.add(`bme-settings-${type}-input`);
+
+    if (type === "toggle") {
+        input.checked = value;
+        input.type = "checkbox";
+
+    } else if (type === "color") {
+        input.value = value;
+        input.type = "color";
+
+    } else if (type === "number") {
+        input.value = value;
+    }
 
     input.addEventListener("change", e => {
-        const value = e.target.value;
         try {
-            if (isNaN(Number(value))) throw new Error("Input value must be a number.");
-            if (limit) {
-                if (value < limit.min) throw new Error(`Minimum value is ${limit.min}`);
-                if (value > limit.max) throw new Error(`Maximum value is ${limit.max}`);
-            } else if (value < -1) throw new Error("Minimum value is -1");
+            const input = e.target;
+            const newValue = type === "toggle" ? input.checked : type === "number" ? Number(input.value) : input.value;
 
-            setSettingTo(settingsBucket, settingsName, Number(value))
-            e.target.classList.add("bme-sm-green")
-            setTimeout(() => { e.target.classList.remove("bme-sm-green") }, 400);
+            if (type === "number") {
+                const min = isNaN(Number(meta?.min)) ? -1 : meta?.min;
+                if (!isNaN(Number(min)) && newValue < min) throw new Error(`The new element was ${newValue}, while the minimum limit is: ${min}`);
+
+                const max = meta?.max;
+                if (max && newValue > max) throw new Error(`The new element was ${newValue}, while the maximum limit is: ${max}`);
+            }
+
+            setSettingTo(bucket, key, newValue);
+            if (type === "number") showFeedback(e.target, "green")
+
+            if (meta?.segment) {
+                if (Boolean(newValue)) meta.segment.classList.remove("bme-inactive-segment");
+                else meta.segment.classList.add("bme-inactive-segment");
+            }
         } catch (error) {
-            console.error(error);
-            e.target.classList.add("bme-sm-red")
-            setTimeout(() => { e.target.classList.remove("bme-sm-red") }, 400);
+            console.error(`BM-EXTRA: ${error}`);
+            if (type === "number") showFeedback(e.target, "red")
         }
     })
 
-    const desc = document.createElement("p");
-    desc.className = "bme-settings-description";
-    desc.innerHTML = description;
+    return input;
+}
+function showFeedback(element, color) {
+    element.classList.add(`bme-sm-${color}`)
+    setTimeout(() => { element.classList.remove(`bme-sm-${color}`) }, 400);
+}
+function getSwitchInputElement(type, bucket, key, value, meta) {
+    const element = document.createElement("button");
+    element.classList.add(`bme-settings-${type}-input`);
 
-    element.append(firstRow, desc)
-    if (requirements) {
-        const requirementsElement = document.createElement("p");
-        requirementsElement.classList.add("bme-settings-requirements");
-        requirementsElement.innerText = `REQUIRED: ${requirements.join(" | ")}`;
-        element.append(requirementsElement);
-    }
+    const displayValue = getDisplayValue(value, meta.options)
+    element.innerText = displayValue;
+
+    element.addEventListener("click", e => {
+        const btn = e.target;
+
+        let index = meta.options.findIndex(item => item.display === btn.innerText) + 1;
+        if (index >= meta.options.length) index = 0;
+
+        const next = meta.options[index]
+        btn.innerText = next.display
+        setSettingTo(bucket, key, next.value);
+
+    })
+
     return element;
 }
-function getColorSettingsElement(title, description, requirements, settingsBucket, settingsName, currentValue) {
-    const element = document.createElement("div");
-    element.className = "bme-settings-row";
+function getDisplayValue(value, options) {
+    const item = options.find(line => line.value === value);
+    return item.display || "N/A";
+}
+function getSelectInputElement(type, bucket, key, value, meta) {
+    const select = document.createElement("select");
+    select.classList.add("bme-settings-selector")
 
-    const firstRow = document.createElement("div");
-
-    const titleElement = document.createElement("h3");
-    titleElement.className = "bme-settings-title";
-    titleElement.textContent = title;
-
-    const input = document.createElement("input");
-    input.classList.add("bme-settings-color-input")
-    input.type = "color";
-    input.value = currentValue;
-    firstRow.append(titleElement, input)
-
-    input.addEventListener("change", e => {
-        const value = e.target.value;
-        try {
-            setSettingTo(settingsBucket, settingsName, value);
-            e.target.classList.add("bme-sm-green");
-            setTimeout(() => { e.target.classList.remove("bme-sm-green"); }, 400);
-        } catch (error) {
-            console.error(error);
-            e.target.classList.add("bme-sm-red");
-            setTimeout(() => { e.target.classList.remove("bme-sm-red"); }, 400);
-        }
+    meta.options.forEach(({ value: optionValue, display }) => {
+        const option = document.createElement("option");
+        option.value = optionValue;
+        option.textContent = display;
+        if (optionValue === value) option.selected = true;
+        select.appendChild(option);
     });
 
-    const desc = document.createElement("p");
-    desc.className = "bme-settings-description";
-    desc.textContent = description;
+    select.addEventListener("change", e => {
+        const value = isNaN(Number(e.target.value)) ? e.target.value : Number(e.target.value);
+        setSettingTo(bucket, key, value);
+    });
 
-    element.append(firstRow, desc)
-    if (requirements) {
-        const requirementsElement = document.createElement("p");
-        requirementsElement.classList.add("bme-settings-requirements");
-        requirementsElement.innerText = `REQUIRED: ${requirements.join(" | ")}`;
-        element.append(requirementsElement);
-    }
-    return element;
+    return select;
 }
 function setSettingTo(settingsBucket, settingsName, settingsValue) {
     const settings = JSON.parse(localStorage.getItem(settingsBucket));
@@ -1322,6 +1373,13 @@ function validateRequirement(requirement) {
         if (key.length !== 32) return false;
 
         return true;
+    } else if (requirement === "SM Names") {
+        const key = localStorage.getItem("BME_SM_NAMES");
+        if (!key) return false;
+        return true;
+    } else if (requirement === "PROXYCHECK") {
+        const settings = JSON.parse(localStorage.getItem("BME_PROXY_CHECK_SETTINGS"));
+        if (settings.apiKey) return true;
     } else if (requirement.startsWith("RUST API - ")) {
         const key = localStorage.getItem("BME_RUST_API_KEY");
         if (!key) return false;
@@ -1331,10 +1389,6 @@ function validateRequirement(requirement) {
         if (type === "HF" && key[54] == 1) return true;
         if (type === "HA" && key[56] == 1) return true;
         if (type === "PB" && key[57] == 1) return true;
-    } else if (requirement === "SM Names") {
-        const key = localStorage.getItem("BME_SM_NAMES");
-        if (!key) return false;
-        return true;
     }
 
     return false
@@ -1384,6 +1438,7 @@ export function checkAndSetupSettingsIfMissing() {
     checkBmInfoSettings();
     checkSidebarSettings();
     checkBanPageSettings();
+    checkProxyCheckSettings();
 }
 
 function checkOverviewSettings() {
@@ -1427,6 +1482,9 @@ function checkIdentifierSettings() {
         if (typeof (settings.displayAvatars) !== "boolean") throw new Error("Settings error");
         if (typeof (settings.zoomableAvatars) !== "boolean") throw new Error("Settings error");
         if (typeof (settings.showIspAndAsnData) !== "boolean") throw new Error("Settings error");
+        if (typeof (settings.requestProxyCheck) !== "boolean") throw new Error("Settings error");
+        if (typeof (settings.pCheckMaxIpNumber) !== "number") throw new Error("Settings error");
+        if (typeof (settings.pCheckRecently) !== "number") throw new Error("Settings error");
         if (typeof (settings.highlightVpn) !== "boolean") throw new Error("Settings error");
         if (typeof (settings.removeVpnLabel) !== "boolean") throw new Error("Settings error");
         if (typeof (settings.vpnAbove) !== "number") throw new Error("Settings error");
@@ -1444,6 +1502,9 @@ function getDefaultIdentifierSettings() {
     settings.displayAvatars = false;
     settings.zoomableAvatars = true;
     settings.showIspAndAsnData = true;
+    settings.requestProxyCheck = false;
+    settings.pCheckMaxIpNumber = 10;
+    settings.pCheckRecently = 10;
     settings.highlightVpn = false;
     settings.removeVpnLabel = true;
     settings.vpnAbove = -1;
@@ -1586,6 +1647,36 @@ function getDefaultBanPageSettings() {
     settings.presets.setupBansAfterFirst = true;
     settings.presets.spot = "right-slot-1";
     settings.presets.items = [];
+
+    return settings;
+}
+function checkProxyCheckSettings() {
+    try {
+        const settings = JSON.parse(localStorage.getItem("BME_PROXY_CHECK_SETTINGS"));
+        if (typeof (settings) !== "object") throw new Error("Settings error");
+        if (typeof (settings.apiKey) !== "string") throw new Error("Settings error");
+        if (typeof (settings.proxyPriority) !== "boolean") throw new Error("Settings error");
+        if (typeof (settings.maxIps) !== "number") throw new Error("Settings error");
+        if (typeof (settings.checkAfter) !== "number") throw new Error("Settings error");
+        if (typeof (settings.keepCache) !== "boolean") throw new Error("Settings error");
+        if (typeof (settings.ignoreKnownVpns) !== "boolean") throw new Error("Settings error");
+        if (typeof (settings.lastRateLimit) !== "number") throw new Error("Settings error");
+    } catch (error) {
+        const defaultSettings = getDefaultProxyCheckSettings();
+        localStorage.setItem("BME_PROXY_CHECK_SETTINGS", JSON.stringify(defaultSettings));
+    }
+}
+function getDefaultProxyCheckSettings() {
+    const settings = {};
+
+    settings.apiKey = "";
+    settings.proxyPriority = false;
+    settings.maxIps = 10;
+    settings.checkAfter = 2592000000;
+    settings.ignoreKnownVpns = true;
+    settings.keepCache = true;
+
+    settings.lastRateLimit = -1;
 
     return settings;
 }

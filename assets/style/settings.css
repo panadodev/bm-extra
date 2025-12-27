@@ -345,7 +345,7 @@
     background: #ffffff40;
 }
 
-.bme-key-settings-optional {
+.bme-key-settings-detail {
     font-size: 13px;
     color: #8d8d8d;
 }
@@ -415,6 +415,9 @@
     -webkit-appearance: none;
     border-radius: 6px;
     cursor: pointer;
+}
+.bme-settings-switch-input{
+    min-width: 100px
 }
 
 .bme-settings-color-input::-webkit-color-swatch-wrapper {
@@ -618,7 +621,7 @@
 
 
 
-
+.bme-settings-toggle-input[type="checkbox"]:focus,
 .bme-toggle-input[type="checkbox"]:focus {
     outline: none;
 }
@@ -626,6 +629,7 @@
 /**
     Heavily modified ChatGPT code 2025. 10. 03.
 */
+.bme-settings-toggle-input[type="checkbox"],
 .bme-toggle-input[type="checkbox"] {
     -webkit-appearance: none;
     appearance: none;
@@ -645,6 +649,7 @@
     align-items: center;
 }
 
+.bme-settings-toggle-input[type="checkbox"]::after,
 .bme-toggle-input[type="checkbox"]::after {
     content: "";
     position: absolute;
@@ -657,30 +662,36 @@
     transition: all 150ms ease;
 }
 
+.bme-settings-toggle-input[type="checkbox"]:checked,
 .bme-toggle-input[type="checkbox"]:checked {
     background: #55ff55d9;
     border-color: #55ff55;
 }
 
+.bme-settings-toggle-input[type="checkbox"]:checked::after,
 .bme-toggle-input[type="checkbox"]:checked::after {
     transform: translateX(20px);
 }
 
+.bme-settings-toggle-input[type="checkbox"]:active::after,
 .bme-toggle-input[type="checkbox"]:active::after {
     transform: translateX(0px) scale(0.85);
 }
 
+.bme-settings-toggle-input[type="checkbox"]:active:checked::after,
 .bme-toggle-input[type="checkbox"]:active:checked::after {
     transform: translateX(20px) scale(0.85) !important;
 }
 
+.bme-settings-toggle-input[type="checkbox"]:disabled,
 .bme-toggle-input[type="checkbox"]:disabled {
     cursor: not-allowed;
     opacity: .6;
 }
 
 @media (prefers-reduced-motion: reduce) {
-
+    .bme-settings-toggle-input[type="checkbox"],
+    .bme-settings-toggle-input[type="checkbox"]::after,
     .bme-toggle-input[type="checkbox"],
     .bme-toggle-input[type="checkbox"]::after {
         transition: none;

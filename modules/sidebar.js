@@ -29,7 +29,7 @@ export async function insertFriendsSidebarElement(steamFriends, connectedPlayers
     server = await server;
 
     if (typeof (steamFriends) !== "string") {
-        const onlineIds = server.map(item => item.steamId);
+        const onlineIds = server?.map(item => item.steamId) || [];
         steamFriends = steamFriends.map(item => {
             const online = onlineIds.includes(item.steamId);
             return { ...item, online }
@@ -61,7 +61,7 @@ export async function insertHistoricFriendsSidebarElement(historicFriends, steam
     if (typeof (steamFriends) === "string") steamFriends = [];
     steamFriends = steamFriends.map(item => item.steamId);
 
-    const onlineIds = server.map(item => item.steamId);
+    const onlineIds = server?.map(item => item.steamId) || [];
 
     const rustApiFriends = (await historicFriends.rustApi)
         .filter(friend => !steamFriends.includes(friend.steamId))

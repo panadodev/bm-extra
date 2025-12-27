@@ -14,10 +14,9 @@ async function findElementWhenAppears(selector) {
     let element = document.querySelector(selector);
     let count = 0;
 
-    while (!element) {
-        if (count > 50) break;
+    while (!element && count < 100) {
         await new Promise(r => setTimeout(r, 25 + (count * 5)));
-
+        
         element = document.querySelector(selector);
         count++;
     }
@@ -49,6 +48,7 @@ export function getTimeString(timestamp, left = false) {
     if (since > ONE_SECOND) return `${Math.floor(since / ONE_SECOND)} seconds`
     return "NaN";
 }
+
 export function getBmInfoTimeString(timestamp) {
     if (timestamp > (3 * ONE_DAY)) return `${Math.floor(timestamp / ONE_DAY)} days`;
     if (timestamp > ONE_HOUR) return `${Math.floor(timestamp / ONE_HOUR)} hours`;
@@ -218,4 +218,25 @@ export function setNativeValue(select, value, highlight) {
 function highlightElement(element, color) {
     element.classList.add(`bme-${color}-change`);
     setTimeout(() => { element.classList.remove(`bme-${color}-change`); }, 400);
+}
+
+export function getSteamIdObject(array) {
+    const steamId = array.find(item => {
+        if (item.type !== "identifier") return false;
+        if (item.attributes?.type !== "steamID") return false;
+        return true;
+    })
+    return steamId;
+}
+
+export function getIdentifierType(identifier) {
+    const innerText = identifier?.children[1]?.innerText;
+    const type = Boolean(innerText) ? innerText.trim() : null;
+    if (type === null) return { type, id: null };
+
+    const typeElements = identifier?.childNodes[1].children;
+    const offset = type === "Name" ? 1 : 2;
+    const searchLink = typeElements[typeElements.length - offset]?.href;
+    const id = searchLink ? searchLink.split("=")[1] : null;
+    return { type, id }
 }
