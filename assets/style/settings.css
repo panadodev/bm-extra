@@ -1,11 +1,17 @@
 #bme-settings-button {
+    position: relative;
+    float: right;
+    top: 20px;
+
     width: 45px;
     height: 45px;
 
-    margin-left: auto;
     border-radius: 5px;
     transition: 200ms;
     cursor: pointer;
+
+    -webkit-user-drag: none;
+    user-select: none;
 }
 
 #bme-settings-button:hover {
@@ -79,6 +85,10 @@
     overflow-y: scroll;
 
     padding-left: 20px;
+}
+
+#bme-settings-body>div {
+    padding-bottom: 20px;
 }
 
 #bme-settings-body::-webkit-scrollbar {
@@ -276,9 +286,11 @@
 
     transition: 150ms;
 }
-.bme-inactive-segment{
+
+.bme-inactive-segment {
     opacity: 0.4;
 }
+
 .bme-settings-segment>div {
     margin-top: 8px !important;
 }
@@ -345,7 +357,7 @@
     background: #ffffff40;
 }
 
-.bme-key-settings-optional {
+.bme-key-settings-detail {
     font-size: 13px;
     color: #8d8d8d;
 }
@@ -417,6 +429,10 @@
     cursor: pointer;
 }
 
+.bme-settings-switch-input {
+    min-width: 100px
+}
+
 .bme-settings-color-input::-webkit-color-swatch-wrapper {
     padding: 0;
 }
@@ -449,9 +465,11 @@
     outline: none;
     transition: 200ms;
 }
-.bme-preset-color-settings{
+
+.bme-preset-color-settings {
     padding: 0 !important;
 }
+
 .bme-preset-color-settings::-webkit-color-swatch-wrapper {
     padding: 0;
 }
@@ -523,10 +541,11 @@
 
 #bme-ban-presets-showcase {
     padding: 20px;
-    padding-bottom: 80px;
+    padding-bottom: 40px !important;
     border-bottom: 1px solid #ffffff;
 }
-#bme-ban-presets-showcase h3{
+
+#bme-ban-presets-showcase h3 {
     margin-bottom: 5px;
 }
 
@@ -613,12 +632,98 @@
     cursor: not-allowed !important;
 }
 
+.bme-ban-import-export {
+    padding: 20px;
+    border-bottom: 1px solid #ffffff;
+
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.bme-ban-import-export>div {
+    padding-left: 20px;
+    display: flex;
+    gap: 20px;
+}
+
+.bme-ban-import-export button {
+    width: 150px;
+    height: 30px;
+
+    background: #0e0e0e;
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1;
+    border: 2px #0e0e0e solid;
+    cursor: pointer;
+    transition: 125ms;
+}
+
+.bme-ban-import-export button:hover {
+    background: #0e0e0ebf;
+}
+
+.bme-ban-import-export button:active {
+    background: #0e0e0e80;
+    transform: scale(0.98);
+}
+
+#bme-ie-status-text:empty {
+    display: none;
+}
+
+#bme-ie-status-text {
+    padding-left: 40px !important;
+    padding-top: 10px !important;
+
+    font-size: 18px;
+}
+
+
+.bme-settings-hotkey-input {
+    width: 340px;
+    height: 24px;
+
+    background: #00000080;
+    border: 1px solid #ffffff40;
+    border-radius: 3px;
+
+    outline: none;
+    text-align: center;
+
+    transition: 150ms;
+}
+
+.bme-settings-hotkey-input:focus {
+    border-color: #085aad;
+    background: #02103060;
+}
 
 
 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.bme-settings-toggle-input[type="checkbox"]:focus,
 .bme-toggle-input[type="checkbox"]:focus {
     outline: none;
 }
@@ -626,6 +731,7 @@
 /**
     Heavily modified ChatGPT code 2025. 10. 03.
 */
+.bme-settings-toggle-input[type="checkbox"],
 .bme-toggle-input[type="checkbox"] {
     -webkit-appearance: none;
     appearance: none;
@@ -645,6 +751,7 @@
     align-items: center;
 }
 
+.bme-settings-toggle-input[type="checkbox"]::after,
 .bme-toggle-input[type="checkbox"]::after {
     content: "";
     position: absolute;
@@ -657,23 +764,28 @@
     transition: all 150ms ease;
 }
 
+.bme-settings-toggle-input[type="checkbox"]:checked,
 .bme-toggle-input[type="checkbox"]:checked {
     background: #55ff55d9;
     border-color: #55ff55;
 }
 
+.bme-settings-toggle-input[type="checkbox"]:checked::after,
 .bme-toggle-input[type="checkbox"]:checked::after {
     transform: translateX(20px);
 }
 
+.bme-settings-toggle-input[type="checkbox"]:active::after,
 .bme-toggle-input[type="checkbox"]:active::after {
     transform: translateX(0px) scale(0.85);
 }
 
+.bme-settings-toggle-input[type="checkbox"]:active:checked::after,
 .bme-toggle-input[type="checkbox"]:active:checked::after {
     transform: translateX(20px) scale(0.85) !important;
 }
 
+.bme-settings-toggle-input[type="checkbox"]:disabled,
 .bme-toggle-input[type="checkbox"]:disabled {
     cursor: not-allowed;
     opacity: .6;
@@ -681,6 +793,8 @@
 
 @media (prefers-reduced-motion: reduce) {
 
+    .bme-settings-toggle-input[type="checkbox"],
+    .bme-settings-toggle-input[type="checkbox"]::after,
     .bme-toggle-input[type="checkbox"],
     .bme-toggle-input[type="checkbox"]::after {
         transition: none;

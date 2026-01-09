@@ -1,12 +1,10 @@
-import { getElementWhenAppears, getLastServer, getSteamFriendlistFromRustApi, getSteamFriendlistFromSteam, getTimeString, setNativeValue } from "./misc.js";
+import { getElementWhenAppears, getLastServer, getSteamFriendlistFromRustApi, getSteamFriendlistFromSteam, getTimeString, removeSidebars, setNativeValue } from "./misc.js";
 
-let insertSidebarsProcess = false;
 export async function insertSidebars() {
     const mainElement = await getElementWhenAppears("main", true);
     if (!mainElement) return console.error("BM-EXTRA: Failed to locate parent of rconContainer for sidebar placements.");
 
-    const elementsToRemove = document.querySelectorAll(".bme-sidebar");
-    elementsToRemove.forEach(item => item.remove())
+    removeSidebars();
 
     const left = getSidebarElement("left");
     const right = getSidebarElement("right");
@@ -29,7 +27,7 @@ export async function insertFriendsSidebarElement(steamFriends, connectedPlayers
     server = await server;
 
     if (typeof (steamFriends) !== "string") {
-        const onlineIds = server.map(item => item.steamId);
+        const onlineIds = server?.map(item => item.steamId) || [];
         steamFriends = steamFriends.map(item => {
             const online = onlineIds.includes(item.steamId);
             return { ...item, online }
@@ -61,7 +59,7 @@ export async function insertHistoricFriendsSidebarElement(historicFriends, steam
     if (typeof (steamFriends) === "string") steamFriends = [];
     steamFriends = steamFriends.map(item => item.steamId);
 
-    const onlineIds = server.map(item => item.steamId);
+    const onlineIds = server?.map(item => item.steamId) || [];
 
     const rustApiFriends = (await historicFriends.rustApi)
         .filter(friend => !steamFriends.includes(friend.steamId))
@@ -293,7 +291,7 @@ export async function updatePlayerProfileElements(cache) {
 
         const playerElement = getPlayerElement(playerData, sidebarSettings);
 
-        profile.replaceWith(playerElement)
+        profile.replaceWith(playerElement);
     }
 }
 

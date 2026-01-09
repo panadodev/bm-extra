@@ -1,3 +1,5 @@
+import { getTimeString } from "../../misc.js";
+
 export function getInfoPanel(bmSteamData, bmData, rustPremium) {
     const element = document.createElement("div");
 
@@ -391,20 +393,6 @@ const ONE_SECOND = 1000;
 const ONE_MINUTE = 60 * ONE_SECOND;
 const ONE_HOUR = 60 * ONE_MINUTE;
 const ONE_DAY = 24 * ONE_HOUR;
-const ONE_MONTH = 30 * ONE_DAY;
-const ONE_YEAR = 12 * ONE_MONTH;
-export function getTimeString(timestamp) {
-    const now = Date.now();
-    const since = now - timestamp;
-
-    if (since > ONE_YEAR) return `${(since / ONE_YEAR).toFixed(1)} years`;
-    if (since > ONE_MONTH) return `${(since / ONE_MONTH).toFixed(1)} months`;
-    if (since > ONE_DAY) return `${Math.floor(since / ONE_DAY)} days`;
-    if (since > ONE_HOUR) return `${Math.floor(since / ONE_HOUR)} hours`;
-    if (since > ONE_MINUTE) return `${Math.floor(since / ONE_MINUTE)} minutes`;
-    if (since > ONE_SECOND) return `${Math.floor(since / ONE_SECOND)} seconds`
-    return NaN;
-}
 function getBmInfoTimeString(timestamp) {
     if (timestamp > (3 * ONE_DAY)) return `${Math.floor(timestamp / ONE_DAY)} days`;
     if (timestamp > ONE_HOUR) return `${Math.floor(timestamp / ONE_HOUR)} hours`;

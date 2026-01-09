@@ -1,7 +1,9 @@
 #bme-server-panel {
     padding-left: 30px;
 }
-
+.main{
+    min-height: 100dvh;
+}
 #bme-server-panel p {
     line-height: 1;
     font-size: 20px;
@@ -205,8 +207,9 @@
     align-items: center;
     gap: 4px;
 
-    border-radius: 2px;
+    border-radius: 4px;
     text-decoration: none;
+    color: #ffffff;
 
     opacity: 0.5;
     transition: 75ms;
@@ -220,29 +223,126 @@
 }
 
 .bme-alert-element a:hover {
-    background: #ffffff10;
+    opacity: 0.65;
     text-decoration: none;
-    opacity: 0.85;
+    color: #ffffff;
+    background: #ffffff10;
 }
 
 .bme-alert-element a:active {
+    opacity: 0.95;
     text-decoration: none;
-    opacity: 1;
+    color: #ffffff;
+    background: #ffffff20;
 }
 
 .bme-alert-element a:focus {
     text-decoration: none;
+    color: #ffffff;
 }
 
 .bme-green-change {
     border-color: #55ff55 !important;
     background-color: #55ff5540 !important;
 }
+
 .bme-red-change {
     border-color: #ff5555 !important;
     background-color: #ff555540 !important;
 }
 
+.bme-pc-ip-main {
+    padding: 4px 0px !important;
+    cursor: pointer;
+    transition: 100ms;
+}
+
+.bme-pc-ip-main:hover {
+    color: #dbdbdb;
+}
+
+.bme-pc-ip-main:active {
+    color: #ffffff;
+}
+
+.bme-ip-nest {
+    height: 0px;
+    margin-left: 20px !important;
+
+    overflow: hidden;
+    transition: 200ms ease-in-out;
+
+}
+
+.bme-pc-open {
+    height: 120px !important;
+}
+
+
+
+
+.bme-pc-details-table {
+    display: flex;
+    font-family: "Menlo", "Monaco", "Consolas", "Courier New", monospace;
+}
+
+.bme-pc-details-row {
+    width: var(--width);
+}
+
+.bme-pc-details-column>span {
+    display: inline-block;
+    width: var(--width);
+}
+
+.bme-pc-details-column>span:first-child {
+    text-align: right;
+    padding-right: 1ch;
+}
+
+.bme-pc-details-column>span:last-child {
+    border-right: 1px solid #ffffff;
+    height: 20px;
+}
+
+.bme-button {
+    background: #0c5da5;
+    transition: 100ms;
+    border: none;
+
+    height: 20px !important;
+    padding: 0px 5px;
+
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+
+    line-height: 1;
+}
+
+.bme-button:hover {
+    opacity: 0.95;
+}
+
+.bme-button:active {
+    opacity: 0.8;
+    transform: scale(0.95);
+}
+
+.bme-pressed {
+    background: #202020;
+}
+
+.bme-button-redacted:hover,
+.bme-button-disabled:hover,
+.bme-button-redacted:active,
+.bme-button-disabled:active,
+.bme-button-redacted,
+.bme-button-disabled {
+    background: #545454;
+    opacity: 1 !important;
+    transform: none !important;
+}
 
 
 
