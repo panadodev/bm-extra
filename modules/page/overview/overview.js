@@ -1,5 +1,5 @@
 import { getInfoPanel } from "./getInfoPanel.js";
-import { checkIfAlright, getElementWhenAppears, getTimeString, getSteamIdObject } from "../../misc.js";
+import { shouldAbort, getElementWhenAppears, getTimeString, getSteamIdObject } from "../../misc.js";
 
 export async function displayServerActivity(bmId, bmProfile) {
     bmProfile = await bmProfile;
@@ -24,16 +24,18 @@ export async function displayServerActivity(bmId, bmProfile) {
     const onlineServers = servers.filter(server => server.online);
 
     const rconElement = await getElementWhenAppears("RCONPlayerPage");
+    
     const title = rconElement?.firstChild;
     if (!title) return console.error("BM-EXTRA: Failed to setup serverElement.")
     const serverElement = getCurrentServersElement(onlineServers.length ? onlineServers : [servers[0]]);
+    
     serverElement.id = "bme-server-panel"
     if (!serverElement) return console.error("BM-EXTRA: serverElement failed to assemble.")
 
-    if (checkIfAlright(bmId, "bme-server-panel")) return;
+    if (shouldAbort(bmId, "bme-server-panel")) return;
     title.insertAdjacentElement("afterend", serverElement);
 }
-function getCurrentServersElement(servers) {
+function getCurrentServersElement(servers) {    
     const element = document.createElement("div");
     for (const server of servers) {
         if (!server.online && !element.classList.contains("offline"))
@@ -93,7 +95,7 @@ export async function displayInfoPanel(bmId, bmProfile, steamData, bmActivity, r
     const infoPanel = getInfoPanel(bmSteamData, bmData, rustPremium);
     infoPanel.id = "bme-info-panel";
 
-    if (checkIfAlright(bmId, "bme-info-panel")) return;
+    if (shouldAbort(bmId, "bme-info-panel")) return;
     identifierDiv.insertAdjacentElement("afterend", infoPanel)
 }
 function getSteamData(steamIdObject, steamData) {
@@ -226,7 +228,7 @@ export async function limitItem(bmId, limit, item) {
 
         count++;
         if (count <= limit) continue;
-        if (checkIfAlright(bmId, null, "overview")) return;
+        if (shouldAbort(bmId, null, "overview")) return;
         identifier.classList.add("bme-hidden");
     }
 }

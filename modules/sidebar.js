@@ -1,11 +1,10 @@
-import { getElementWhenAppears, getLastServer, getSteamFriendlistFromRustApi, getSteamFriendlistFromSteam, getTimeString, setNativeValue } from "./misc.js";
+import { getElementWhenAppears, getLastServer, getSteamFriendlistFromRustApi, getSteamFriendlistFromSteam, getTimeString, removeSidebars, setNativeValue } from "./misc.js";
 
 export async function insertSidebars() {
     const mainElement = await getElementWhenAppears("main", true);
     if (!mainElement) return console.error("BM-EXTRA: Failed to locate parent of rconContainer for sidebar placements.");
 
-    const elementsToRemove = document.querySelectorAll(".bme-sidebar");
-    elementsToRemove.forEach(item => item.remove())
+    removeSidebars();
 
     const left = getSidebarElement("left");
     const right = getSidebarElement("right");

@@ -2,7 +2,7 @@ console.log("Service worker loaded!")
 
 /**
  * apiKey - API KEY REGARDLESS OF THE SERVICE
- * subject - steam ID
+ * subject - steam ID, IP
  */
 chrome.runtime.onMessage.addListener(async (req, sender) => {
     if (!req.type.startsWith("BME_")) return;

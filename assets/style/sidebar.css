@@ -22,11 +22,12 @@ body {
 }
 
 .bme-sidebar-left {
-    right: calc(50% + 600px);
+    left: 50dvw;
+    transform: translateX(calc(-360px + -590px));
 }
 
 .bme-sidebar-right {
-    left: calc(50% + 600px);
+    left: calc(50dvw + 590px);
 }
 
 

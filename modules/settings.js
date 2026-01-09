@@ -1,4 +1,4 @@
-import { getMyServers, setNativeValue } from "./misc.js";
+import { getMyServers, rustApiKeyPermissionBits, setNativeValue } from "./misc.js";
 import { getPcCacheSize } from "./page/cache.js";
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
@@ -1102,7 +1102,7 @@ function getApiKeysSettings() {
     const pcIpDurations = [
         { display: "Last 1 day", value: 86400000 },
         { display: "Last 15 days", value: 1296000000 },
-        { display: "Last 1 Months", value: 2592000000 },
+        { display: "Last 1 Month", value: 2592000000 },
         { display: "Last 2 Months", value: 5184000000 },
         { display: "Last 3 Months", value: 7776000000 },
         { display: "Last Year", value: 31536000000 },
@@ -1114,16 +1114,16 @@ function getApiKeysSettings() {
         null, settingsBucket, "checkAfter", settings.checkAfter, { options: pcIpDurations }
     )
 
-    const currentCacheSize = getPcCacheSize();
     const ignoreKnownVpns = getSettingsElement(
         "toggle", "Ignore Known VPNs",
         "Do not request known VPNs from proxycheck.io",
         null, settingsBucket, "ignoreKnownVpns", settings.ignoreKnownVpns
     )
-
+    
+    const currentCacheSize = getPcCacheSize();
     const keepCache = getSettingsElement(
         "toggle", "Keep Cache",
-        `Keep proxycheck data for 24 hours, in order if you reopen a player don't waste resources with requesting the necessary data again. Your current cache has ${currentCacheSize} items.`,
+        `Keep proxycheck data for 24 hours, in order if you reopen a player don't waste resources with requesting the unnecessary data again. Your current cache has ${currentCacheSize} items.`,
         null, settingsBucket, "keepCache", settings.keepCache
     )
 
@@ -1328,7 +1328,7 @@ function getPrivacySettingsElements() {
 
     const privacyHotkey = getSettingsElement(
         "hotkey", "Hotkey:",
-        "Choose your Hotkey combination", null, settingsBucket, "hotkey", settings.hotkey,
+        "Choose your Hotkey combination, this will trigger the redaction of the current page", null, settingsBucket, "hotkey", settings.hotkey,
         {max: 5}
     )
     const redactIps = getSettingsElement(
@@ -1338,9 +1338,10 @@ function getPrivacySettingsElements() {
     )
     const redactSteamId = getSettingsElement(
         "toggle", "Redact SteamId",
-        "When you activate your hotkey, Steam ID identifier will be redacted.",
+        "When you activate your hotkey, Steam ID and BattlEye GUID identifier will be redacted.",
         null, settingsBucket, "redactSteamId", settings.redactSteamId
     )
+
     const redactTimeOptions = [
         { display: "500 ms", value: 500 },
         { display: "1 second", value: 1000 },
@@ -1545,9 +1546,9 @@ function validateRequirement(requirement) {
         if (key.length !== 64) return false;
 
         const type = requirement.split(" - ")[1];
-        if (type === "HF" && key[54] == 1) return true;
-        if (type === "HA" && key[56] == 1) return true;
-        if (type === "PB" && key[57] == 1) return true;
+        if (type === "HF" && key[rustApiKeyPermissionBits.historicFriends] == 1) return true;
+        if (type === "HA" && key[rustApiKeyPermissionBits.historicAvatars] == 1) return true;
+        if (type === "PB" && key[rustApiKeyPermissionBits.publicBans] == 1) return true;
     }
 
     return false
@@ -1656,7 +1657,7 @@ export function checkAndSetupSettingsIfMissing() {
 function checkOverviewSettings() {
     try {
         const settings = JSON.parse(localStorage.getItem("BME_OVERVIEW_SETTINGS"));
-        if (typeof (settings) !== "object") throw new Error("Settings error");
+        if (!settings || typeof (settings) !== "object") throw new Error("Settings error");
         if (typeof (settings.showAlert) !== "boolean") throw new Error("Settings error");
         if (typeof (settings.showAvatar) !== "boolean") throw new Error("Settings error");
         if (typeof (settings.showServer) !== "boolean") throw new Error("Settings error");
@@ -1689,7 +1690,7 @@ function getDefaultOverviewSettings() {
 function checkIdentifierSettings() {
     try {
         const settings = JSON.parse(localStorage.getItem("BME_IDENTIFIER_SETTINGS"));
-        if (typeof (settings) !== "object") throw new Error("Settings error");
+        if (!settings || typeof (settings) !== "object") throw new Error("Settings error");
         if (typeof (settings.showAvatar) !== "boolean") throw new Error("Settings error");
         if (typeof (settings.displayAvatars) !== "boolean") throw new Error("Settings error");
         if (typeof (settings.zoomableAvatars) !== "boolean") throw new Error("Settings error");
@@ -1762,7 +1763,7 @@ function getDefaultBmInfoSettings() {
     settings.steamRustHoursColors = [150, 750, 100000, false]
     settings.gamesLastCheckedColors = [30 * ONE_DAY, 60 * ONE_DAY, 90 * ONE_DAY, true]
     settings.bmAccountAgeColors = [30 * ONE_DAY, 90 * ONE_DAY, -1, false]
-    settings.serverCountColors = [8, -1, -1], false;
+    settings.serverCountColors = [8, -1, -1, false];
     settings.allReportsBarrier = 2 * ONE_DAY;
     settings.allReportsColor = [-1, -1, -1, false];
     settings.cheatReportsBarrier = 2 * ONE_DAY;
@@ -1867,7 +1868,7 @@ function getDefaultBanPageSettings() {
 function checkProxyCheckSettings() {
     try {
         const settings = JSON.parse(localStorage.getItem("BME_PROXY_CHECK_SETTINGS"));
-        if (typeof (settings) !== "object") throw new Error("Settings error");
+        if (!settings || typeof (settings) !== "object") throw new Error("Settings error");
         if (typeof (settings.apiKey) !== "string") throw new Error("Settings error");
         if (typeof (settings.maxIps) !== "number") throw new Error("Settings error");
         if (typeof (settings.checkAfter) !== "number") throw new Error("Settings error");
@@ -1895,7 +1896,7 @@ function getDefaultProxyCheckSettings() {
 function checkPrivacySettings() {
     try {
         const settings = JSON.parse(localStorage.getItem("BME_PRIVACY_SETTINGS"));
-        if (typeof (settings) !== "object") throw new Error("Settings error");
+        if (!settings || typeof (settings) !== "object") throw new Error("Settings error");
         if (typeof (settings.enabled) !== "boolean") throw new Error("Settings error");
         if (typeof (settings.hotkey) !== "string") throw new Error("Settings error");
         if (typeof (settings.redactIps) !== "boolean") throw new Error("Settings error");

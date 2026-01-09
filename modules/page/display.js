@@ -1,4 +1,4 @@
-import { checkIfAlright, getElementWhenAppears, getLastServer, getStreamerModeName, getSteamIdObject, setNativeValue, getIdentifierType } from "../misc.js";
+import { shouldAbort, getElementWhenAppears, getLastServer, getStreamerModeName, getSteamIdObject, setNativeValue, getIdentifierType } from "../misc.js";
 import { displaySettings } from "../settings.js";
 
 export async function displaySettingsButton(bmId) {
@@ -34,18 +34,17 @@ export async function displayAvatar(bmId, bmProfile, bmSteamData) {
     const mainElement = await getElementWhenAppears("main", true);
 
     //if overview page, wait till RCON element appears, last stage of page load
-    if (location.href.split("/").length === 6)
-        await getElementWhenAppears("RCONPlayerPage");
+    if (location.href.split("/").length === 6) await getElementWhenAppears("RCONPlayerPage");
 
-    const title = mainElement?.firstChild?.firstChild;
+    const title = mainElement?.querySelector("div")?.firstChild;
+    
     if (!title) return;
 
     const avatarElement = document.createElement("img");
     avatarElement.src = avatarUrl;
     avatarElement.id = "bme-avatar";
 
-    if (checkIfAlright(bmId, "bme-avatar")) return;
-
+    if (shouldAbort(bmId, "bme-avatar")) return;
     title.insertAdjacentElement("afterbegin", avatarElement)
 }
 
@@ -65,7 +64,6 @@ export async function swapBattleEyeGuid(bmId, bmProfile) {
 
     for (const identifier of identifierTable) {
         if (!identifier.innerText.includes("BattlEye GUID")) continue;
-
 
         const type = identifier.children[1];
         type.firstChild.innerText = "SM Name";
@@ -95,34 +93,37 @@ export async function selectLastServer(bmId, bmProfile) {
     for (const element of formHeader) {
         if (element.children.length !== 1) continue;
         const child = element.children[0];
-        if (!child || child.nodeName !== "SELECT") continue;
+        if (!child || child.nodeName !== "SELECT") continue;        
 
         servers = child;
         break;
     }
     if (!servers) return console.error("BM-EXTRA: Failed to find servers!");
 
-    const target = String(lastServer.id);
+    const target = String(lastServer?.id);
     setNativeValue(servers, target, true);
 }
 
 let currentRedactedElements = [] //key, originalText
 let showIdentifiersTimeout = null;
 export async function redactIdentifiers(redactSteamId, redactIps, redactTime) {
-    const table = Array.from((await getElementWhenAppears("css-11gv980", true))?.lastChild?.children || []);
-
-    for (const identifier of table) {
+    const tables = Array.from(document.getElementsByClassName("css-11gv980"));
+    tables.forEach(table => redactIdentifierTable(table, redactSteamId, redactIps));
+    
+    if (showIdentifiersTimeout) clearTimeout(showIdentifiersTimeout);
+    showIdentifiersTimeout = setTimeout(() => {
+        showIdentifiers();
+    }, redactTime);
+}
+function redactIdentifierTable(table, redactSteamId, redactIps) {
+    const identifiers = Array.from(table?.lastChild?.children || []);
+    for (const identifier of identifiers) {
         const identifierDetails = getIdentifierType(identifier);
         const type = identifierDetails?.type;
         if (type === null) continue;
 
         const span = identifier?.firstChild?.firstChild?.querySelector("span");
         if (!span) continue;
-
-
-        if ((type === "Steam ID" || type === "BattlEye GUID") && redactSteamId) {
-            redactIdentifier(identifier, span, type);
-        }
 
         if (type === "IP" && redactIps) {
             redactIdentifier(identifier, span, type);
@@ -132,13 +133,14 @@ export async function redactIdentifiers(redactSteamId, redactIps, redactTime) {
 
             const host = identifier.querySelector(".bme-ip-host");
             if (host) redactIdentifier(identifier, host, "Host");
+            continue; //Check next
+        }
+        
+        if ((type === "Steam ID" || type === "BattlEye GUID") && redactSteamId) {
+            redactIdentifier(identifier, span, type);
+            continue; //Check next
         }
     }
-
-    if (showIdentifiersTimeout) clearTimeout(showIdentifiersTimeout);
-    showIdentifiersTimeout = setTimeout(() => {
-        showIdentifiers();
-    }, redactTime);
 }
 function redactIdentifier(identifier, span, type) {
     const spanValue = span.title;
@@ -153,7 +155,6 @@ function redactIdentifier(identifier, span, type) {
     if (type !== "IP") return;
     const button = identifier.querySelector(".bme-button");
     if (button) button.classList.add("bme-button-redacted")
-
 }
 function showIdentifiers() {
     for (const item of currentRedactedElements) item.element.innerHTML = item.originalValue;

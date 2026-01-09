@@ -1,7 +1,9 @@
 #bme-server-panel {
     padding-left: 30px;
 }
-
+.main{
+    min-height: 100dvh;
+}
 #bme-server-panel p {
     line-height: 1;
     font-size: 20px;

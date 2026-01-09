@@ -132,7 +132,7 @@ function getPcDataElement(pc) {
         { label: "ASN:", value: pc.net.asn },
         { label: "ISP:", value: pc.net.isp?.substring(0, 40) },
         { label: "Org:", value: pc.net.org?.substring(0, 40) },
-        { label: "Host:", value: host || "null", className: "bme-ip-host", title: String(host) },
+        { label: "Host:", value: String(host), className: "bme-ip-host", title: String(host) },
         { label: "Range:", value: pc.net.range, className: "bme-ip-range", title: pc.net.range },
         { label: "Type:", value: pc.net.type },
     ]

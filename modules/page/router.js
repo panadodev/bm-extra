@@ -4,6 +4,7 @@ import { advancedBans, closeAdminLog, displayInfoPanel, displayServerActivity, l
 import { highlightVpnIdentifiers, showExtraDataOnIps, displayAvatars } from "./identifier/identifier.js";
 import { displayAvatar, displaySettingsButton, redactIdentifiers, selectLastServer, swapBattleEyeGuid } from "./display.js";
 import { insertBanPresets, insertFriendComparator, insertFriendsSidebarElement, insertHistoricFriendsSidebarElement, insertPublicBansSidebarElement, insertSidebars, insertTeaminfoSidebarElement } from "../sidebar.js";
+import { removeSidebars } from "../misc.js";
 
 let settingsChecked = false;
 export function router(url) {
@@ -16,9 +17,7 @@ export function router(url) {
         settingsChecked = true;
     }
     
-    url = url.split(".com/")[1]
-    const path = url.split("/")
-
+    const path = url.pathname.split("/").filter(Boolean);    
     //rcon/players...
     if (path[0] === "rcon" && path[1] === "players" && path.length > 2) {
         const bmId = path[2];
@@ -31,9 +30,9 @@ export function router(url) {
     }
     
     //rcon/bans/add...
-    if (path[1] === "bans" && path[2]?.startsWith("add?player=")) {
-        const bmId = path[2].split("=")[1];
-        if (isNaN(Number(bmId))) return;
+    if (path[0] === "rcon" && path[1] === "bans" && path[2] === "add") {
+        const bmId = url.searchParams.get("player");
+        if (!bmId || isNaN(Number(bmId))) return;
      
         setupCacheFor(bmId, "BAN_PAGE");
 
@@ -41,17 +40,14 @@ export function router(url) {
     }
 
     //Remove sidebar in any other case
-    const elementsToRemove = document.querySelectorAll(".bme-sidebar");
-    elementsToRemove.forEach(item => item.remove())
+    removeSidebars();
 }
 async function onOverviewPage(bmId) {
     const settings = JSON.parse(localStorage.getItem("BME_OVERVIEW_SETTINGS"))
-    if (!settings) return console.error(`BM-EXTRA: Main settings are missing!`);
 
     const playerCache = cache[bmId];
 
     const sidebarSettings = JSON.parse(localStorage.getItem("BME_SIDEBAR_SETTINGS"));
-    if (!sidebarSettings) return console.error(`BME-EXTRA: Sidebar settings are missing!`)
     sidebar(bmId, playerCache, sidebarSettings)
 
     displaySettingsButton();
@@ -64,16 +60,14 @@ async function onOverviewPage(bmId) {
     if (settings.closeAdminLog) closeAdminLog(bmId);
     if (settings.swapBattleEyeGuid) swapBattleEyeGuid(bmId, playerCache.bmProfile);
     if (settings.maxNames > 0) limitItem(bmId, settings.maxNames, "Name");
-    if (settings.maxIps > 0) limitItem(bmId, settings.maxNames, "IP");
+    if (settings.maxIps > 0) limitItem(bmId, settings.maxIps, "IP");
 }
 async function onIdentifierPage(bmId) {
     const settings = JSON.parse(localStorage.getItem("BME_IDENTIFIER_SETTINGS"))
-    if (!settings) return console.error(`BM-EXTRA: Main settings are missing!`);
 
     const playerCache = cache[bmId];
 
     const sidebarSettings = JSON.parse(localStorage.getItem("BME_SIDEBAR_SETTINGS"));
-    if (!sidebarSettings) return console.error(`BME-EXTRA: Sidebar settings are missing!`)
     sidebar(bmId, playerCache, sidebarSettings)
 
     if (settings.showAvatar) displayAvatar(bmId, playerCache.bmProfile, playerCache.steamData);
@@ -84,7 +78,6 @@ async function onIdentifierPage(bmId) {
 }
 async function onAddBanPage(bmId) {
     const settings = JSON.parse(localStorage.getItem("BME_BAN_PAGE_SETTINGS"))
-    if (!settings) return console.error(`BM-EXTRA: Main settings are missing!`);
 
     const playerCache = cache[bmId];
     
@@ -103,14 +96,13 @@ async function sidebar(bmId, playerCache, settings) {
     if (settings.presets?.enabled) insertBanPresets(settings, playerCache.bmProfile);
 }
 
-
-
 let currentHotkeyTimeout = null;
 let currentSequence = "";
 function detectHotkey(settings) {
     document.addEventListener("keydown", e => {
         if (e.repeat) return;
-
+        if (!e.key) return;
+        
         const key = e.key === "+" ? "plus" : e.key.toLowerCase();
         if (!currentSequence) currentSequence = key;
         else currentSequence += `+${key}`;

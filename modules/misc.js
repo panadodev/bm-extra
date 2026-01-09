@@ -1,4 +1,16 @@
+export const rustApiKeyPermissionBits = {
+    historicFriends: 54,
+    historicAvatars: 56,
+    publicBans: 57,
+};
+
 const _getElement = {};
+/**
+ * Returns a Promise that contains either the element or null if it cannot be found on the page.
+ * @param {String} identifier 
+ * @param {Boolean} isClass 
+ * @returns {Promise<HTMLElement | null>}
+ */
 export function getElementWhenAppears(identifier, isClass) {
     identifier = isClass ? `.${identifier}` : `#${identifier}`;
     if (!_getElement[identifier] || Date.now() > (_getElement[identifier].timestamp + 50)) {
@@ -10,18 +22,22 @@ export function getElementWhenAppears(identifier, isClass) {
 
     return _getElement[identifier].element;
 }
+const MAX_ATTEMPTS = 100;
+const BASE_DELAY_MS = 25;
+const INCREMENTING_DELAY_MS = 5;
 async function findElementWhenAppears(selector) {
     let element = document.querySelector(selector);
     let count = 0;
 
-    while (!element && count < 100) {
-        await new Promise(r => setTimeout(r, 25 + (count * 5)));
-
+    while (count < MAX_ATTEMPTS) {        
         element = document.querySelector(selector);
+        if (element) return element;
+
+        const delay = BASE_DELAY_MS + (count * INCREMENTING_DELAY_MS)
+        await new Promise(r => setTimeout(r, delay));
         count++;
     }
-    if (!element) return null;
-    return element;
+    return null;
 }
 
 const ONE_SECOND = 1000;
@@ -30,31 +46,34 @@ const ONE_HOUR = 60 * ONE_MINUTE;
 const ONE_DAY = 24 * ONE_HOUR;
 const ONE_MONTH = 30 * ONE_DAY;
 const ONE_YEAR = 12 * ONE_MONTH;
-export function getTimeString(timestamp, left = false) {
+export function getTimeString(timestamp, isDuration = false) {
     let since = null;
 
-    if (left) {
+    if (isDuration) {
         since = timestamp;
     } else {
         const now = Date.now();
         since = now - timestamp;
     }
 
-    if (since > ONE_YEAR) return `${(since / ONE_YEAR).toFixed(1)} years`;
-    if (since > ONE_MONTH) return `${(since / ONE_MONTH).toFixed(1)} months`;
-    if (since > ONE_DAY) return `${Math.floor(since / ONE_DAY)} days`;
-    if (since > ONE_HOUR) return `${Math.floor(since / ONE_HOUR)} hours`;
-    if (since > ONE_MINUTE) return `${Math.floor(since / ONE_MINUTE)} minutes`;
-    if (since > ONE_SECOND) return `${Math.floor(since / ONE_SECOND)} seconds`
-    return "NaN";
+    if (since > ONE_YEAR) return plural((since / ONE_YEAR).toFixed(1), "year");
+    if (since > ONE_MONTH) return plural((since / ONE_MONTH).toFixed(1), "month");
+    if (since > ONE_DAY) return plural(Math.floor(since / ONE_DAY), "day");
+    if (since > ONE_HOUR) return plural(Math.floor(since / ONE_HOUR), "hour");
+    if (since > ONE_MINUTE) return plural(Math.floor(since / ONE_MINUTE), "minute");
+    if (since > ONE_SECOND) return plural(Math.floor(since / ONE_SECOND), "second");
+    return `${since} ms`;
 }
-
 export function getBmInfoTimeString(timestamp) {
     if (timestamp > (3 * ONE_DAY)) return `${Math.floor(timestamp / ONE_DAY)} days`;
-    if (timestamp > ONE_HOUR) return `${Math.floor(timestamp / ONE_HOUR)} hours`;
-    if (timestamp > ONE_MINUTE) return `${Math.floor(timestamp / ONE_MINUTE)} minutes`;
-    if (timestamp > ONE_SECOND) return `${Math.floor(timestamp / ONE_SECOND)} seconds`
-    return "NaN";
+    if (timestamp > ONE_HOUR) return plural(Math.floor(timestamp / ONE_HOUR), "hour");
+    if (timestamp > ONE_MINUTE) return plural(Math.floor(timestamp / ONE_MINUTE), "minute");
+    if (timestamp > ONE_SECOND) return plural(Math.floor(timestamp / ONE_SECOND), "second");
+    return `${timestamp} ms`;
+}
+function plural(value, unit) {
+    if (Math.floor(value) === 1) return `${value} ${unit}`;
+    return `${value} ${unit}s`;
 }
 
 export async function getSteamFriendlistFromSteam(steamId) {
@@ -65,6 +84,7 @@ export async function getSteamFriendlistFromSteam(steamId) {
         return await talkToBackgroundScript("BME_STEAM_FRIENDLIST", steamId, STEAM_API_KEY)
     } catch (error) {
         console.error(error);
+        if (error.message === "TIMEOUT") return error.message;
         return "ERROR";
     }
 }
@@ -72,35 +92,47 @@ export async function getSteamFriendlistFromRustApi(steamId) {
     try {
         const RUST_API_KEY = localStorage.getItem("BME_RUST_API_KEY");
         if (!RUST_API_KEY) return "NO_API_KEY";
-        if (RUST_API_KEY[54] !== "1") return "MISSING_PERMISSION"
+        if (RUST_API_KEY.length !== 64) return "INVALID_API_KEY";
+        if (RUST_API_KEY[rustApiKeyPermissionBits.historicFriends] !== "1") return "MISSING_PERMISSION"
 
         return await talkToBackgroundScript("BME_RUST_API_FRIENDLIST", steamId, RUST_API_KEY);
     } catch (error) {
         console.error(error);
+        if (error.message === "TIMEOUT") return "TIMEOUT";
         return "ERROR";
     }
 }
 
 export function getStreamerModeName(steamId) {
-    const names = JSON.parse(localStorage.getItem("BME_SM_NAMES"))?.names;
-    if (!names) return null;
+    try {
+        const names = JSON.parse(localStorage.getItem("BME_SM_NAMES"))?.names;
+        if (!names?.length) return null;
 
-    let v = BigInt(steamId) % 2147483647n;
-    v = v % BigInt(names.length);
+        //FP code
+        let v = BigInt(steamId) % 2147483647n;
+        v = v % BigInt(names.length);
 
-    return names[Number(v)];
+        return names[Number(v)];
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
 }
 
-export function checkIfAlright(bmId, elementId, pageId) {
-    const urlId = location.href.split("/")[5];
+export function shouldAbort(bmId, elementId, pageId) {
+    const urlPaths = new URL(location.href).pathname.split("/").filter(Boolean);
+
+    const urlId = urlPaths[2] || null;
     if (urlId !== bmId) return true; //Page changed
+
     if (elementId) {
         const elementCheck = document.getElementById(elementId);
         if (elementCheck) return true; //Already exist
     }
+
     if (pageId === "overview") {
-        if (!window.location.href.includes("/players/")) return true;
-        if (window.location.href.split("/").length !== 6) return true;
+        if (!urlPaths.includes("players")) return true;
+        if (urlPaths.length !== 3) return true;
     }
 
     return false; //Good to go!
@@ -229,7 +261,6 @@ export function talkToBackgroundScript(type, subject, apiKey) {
 
     return new Promise((resolve, reject) => {
         function handler(response) {
-            console.log(response);
             if (response?.type !== `${type}_RESOLVED`) return;
 
             clearTimeout(timer);
@@ -241,10 +272,15 @@ export function talkToBackgroundScript(type, subject, apiKey) {
 
         const timer = setTimeout(() => {
             chrome.runtime.onMessage.removeListener(handler);
-            reject(new Error(`Timeout waiting for ${resType}`));
+            reject(new Error(`TIMEOUT`));
         }, 10000);
 
         chrome.runtime.onMessage.addListener(handler);
         chrome.runtime.sendMessage({ type, subject, apiKey });
     });
+}
+
+export function removeSidebars() {
+    const elementsToRemove = document.querySelectorAll(".bme-sidebar");
+    elementsToRemove.forEach(item => item.remove())
 }

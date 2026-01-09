@@ -1,4 +1,4 @@
-import { getAuthToken, getLastServer, getSteamFriendlistFromRustApi, getSteamFriendlistFromSteam, talkToBackgroundScript } from "../misc.js";
+import { getAuthToken, getLastServer, getSteamFriendlistFromRustApi, getSteamFriendlistFromSteam, rustApiKeyPermissionBits, talkToBackgroundScript } from "../misc.js";
 import { updatePlayerProfileElements } from "../sidebar.js";
 
 export const cache = {};
@@ -62,8 +62,8 @@ function setupPlayerCache(bmId, authToken) {
 
     if (validate("publicBans", settings, bmId))
         cache[bmId].publicBans = getPublicBans(cache[bmId].bmProfile);
-        //cache.historicFriends.steamidCom
-        //cache.historicFriends.steamidUk
+    //cache.historicFriends.steamidCom
+    //cache.historicFriends.steamidUk
 
     if (validate("bmActivity", settings, bmId))
         cache[bmId].bmActivity = getBmActivity(bmId, authToken);
@@ -116,13 +116,13 @@ function validate(section, { overview, identifier, sidebar, banPage }, bmId) {
     } else if (section === "steamFriends") {
         if (cache[bmId]?.steamFriends !== undefined) return false;//Already Cached
 
-        const needed = 
+        const needed =
             sidebar?.friends.enabled ||
             sidebar?.historicFriends.enabled;
         if (needed) return true;
     } else if (section === "historicFriends") {
         if (cache[bmId]?.historicFriends.rustApi !== undefined) return false;//Already Cached
-        
+
         const needed = sidebar?.historicFriends.enabled
         if (needed) return true;
     } else if (section === "steamAvatars") {
@@ -148,7 +148,7 @@ function validate(section, { overview, identifier, sidebar, banPage }, bmId) {
     } else if (section === "steamData") {
         if (cache[bmId]?.steamData !== undefined) return false;//Already Cached
 
-        const needed = 
+        const needed =
             overview?.showAvatar ||
             overview?.showInfoPanel ||
             identifier?.showAvatar;
@@ -161,7 +161,7 @@ function validate(section, { overview, identifier, sidebar, banPage }, bmId) {
     } else if (section === "serverPop") {
         if (cache[bmId]?.serverPop !== undefined) return false;//Already Cached
 
-        const needed = 
+        const needed =
             (sidebar?.friends.showOnline && sidebar?.friends.enabled) ||
             (sidebar?.friends.showOnline && sidebar?.historicFriends.enabled);
         if (needed) return true;
@@ -406,7 +406,7 @@ async function getAvatarsFromRustApi(steamId) {
     try {
         const rustApiKey = localStorage.getItem("BME_RUST_API_KEY");
         if (!rustApiKey) return "NO_API_KEY";
-        if (rustApiKey[56] !== "1") return "NO_PERMISSION";
+        if (rustApiKey[rustApiKeyPermissionBits.historicAvatars] !== "1") return "NO_PERMISSION";
 
         return await talkToBackgroundScript("BME_RUST_API_AVATARS", steamId, rustApiKey)
     } catch (error) {
@@ -598,7 +598,7 @@ export async function getProxyCheckIpInfo(ips, filter = true) {
             ips = ips.splice(0, settings.maxIps);
     }
 
-    const requestedPcData = await getIpData(ips.map(ip => ip.ip), apiKey);
+    const requestedPcData = await getIpData(ips.map(ip => ip.ip), apiKey, settings.keepCache);
     for (const [ip, value] of requestedPcData) returnIps.set(ip, value)
 
     return returnIps;
@@ -614,7 +614,7 @@ function getCachedIpsData(ips) {
 
     return returnObject;
 }
-async function getIpData(ips, apiKey) {
+async function getIpData(ips, apiKey, keepCache) {
     const ipData = new Map();
     const ipsToRequest = [];
 
@@ -628,7 +628,7 @@ async function getIpData(ips, apiKey) {
     }
 
     const requestedIpData = await getIpDataFromProxyCheck(ipsToRequest.join(","), apiKey);
-    if (typeof (requestedIpData) === "object" && requestedIpData) {
+    if (keepCache && typeof (requestedIpData) === "object" && requestedIpData) {
         mergeRequestedDataWithCache(requestedIpData);
 
         for (const [ip, data] of requestedIpData)
