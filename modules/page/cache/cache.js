@@ -1,5 +1,6 @@
-import { getAuthToken, getLastServer, getSteamFriendlistFromRustApi, getSteamFriendlistFromSteam, rustApiKeyPermissionBits, talkToBackgroundScript } from "../misc.js";
-import { updatePlayerProfileElements } from "../sidebar.js";
+import { getAuthToken, getLastServer, getSteamFriendlistFromRustApi, getSteamFriendlistFromSteam, rustApiKeyPermissionBits, talkToBackgroundScript } from "../../misc.js";
+import { updatePlayerProfileElements } from "../../sidebar.js";
+import { organizations } from "./teaminfo.js";
 
 export const cache = {};
 cache.connectedPlayersData = [];
@@ -429,9 +430,12 @@ async function getCurrentTeam(bmProfile, authToken) {
         const steamId = getSteamIdFromBmProfile(bmProfile)
 
         let rawTeaminfo = "";
-        if (lastServer?.orgId === "29251") rawTeaminfo = await getBzTeamInfo(steamId, lastServer.id, token); //BattleZone
-        if (lastServer?.orgId === "18611") rawTeaminfo = await getBrTeamInfo(steamId, lastServer.id, token, lastServer.orgId); //Bestrust
-        if (lastServer?.orgId === "41737") rawTeaminfo = await getAtlasTeaminfo(steamId, lastServer.id, token) //Atlas
+        for (const organization of organizations) {
+            if (lastServer?.orgId !== organization.id) continue;
+
+            rawTeaminfo = await organization.getTeamInfo(steamId, lastServer.id, token);
+            break;
+        }
 
         //Something failed
         if (!rawTeaminfo || rawTeaminfo === "error") return { teamId: "error", members: [], server: "", raw: "" }
@@ -471,106 +475,6 @@ async function getCurrentTeam(bmProfile, authToken) {
             raw: "error",
             server: "error",
             members: []
-        }
-    }
-}
-async function getBzTeamInfo(steamId, serverId, token) {
-    const resp = await fetch(`https://api.battlemetrics.com/servers/${serverId}/command`, {
-        method: "POST",
-        headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json",
-            "Accept-Version": "^0.1.0"
-        },
-        body: JSON.stringify({
-            data: {
-                type: "rconCommand",
-                attributes: {
-                    command: "raw",
-                    options: {
-                        raw: `teaminfo ${steamId}`
-                    }
-                }
-            }
-        })
-    })
-
-    if (resp.status !== 200) {
-        console.error(`Failed to request teaminfo | Status: ${resp.status}`);
-        return "error";
-    }
-
-    const data = await resp.json();
-    const result = data.data?.attributes?.result
-    if (!result) {
-        console.error(`Failed to request teaminfo | Status: ${resp.status} | Result: ${result}`);
-        return "error";
-    }
-
-    return result;
-}
-async function getBrTeamInfo(steamId, serverId, token, orgId) {
-    const roles = JSON.parse(document.getElementById("storeBootstrap").innerText)?.state?.account?.rconRoles;
-    const brRoles = roles.filter(role => role.org_id === orgId);
-
-    const triggers = [];
-    brRoles.forEach(role => {
-        for (const trigger in role.permissions.triggers || {}) triggers.push(trigger)
-    })
-
-    const payload = getBrPayload(triggers, steamId);
-    const resp = await fetch(`https://api.battlemetrics.com/servers/${serverId}/command`, {
-        method: "POST",
-        headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json",
-            "Accept-Version": "^0.1.0"
-        },
-        body: JSON.stringify({
-            data: payload
-        })
-    })
-
-    if (resp.status !== 200) {
-        console.error(`Failed to request teaminfo | Status: ${resp.status}`);
-        return "error";
-    }
-
-    const data = await resp.json();
-
-    const result = data.data?.attributes?.result[0]?.children[1]?.children[0]?.children[0]?.reference.result
-    if (!result) {
-        console.error(`Failed to request teaminfo | Status: ${resp.status} | Result: ${result}`);
-        return "error";
-    }
-
-    return result;
-
-    function getBrPayload(triggers, steamId) {
-        if (triggers.includes("edb0be86-6f5e-4e4b-a655-5fcecd4af11f")) {
-            return {
-                type: "rconCommand",
-                attributes: {
-                    command: "edb0be86-6f5e-4e4b-a655-5fcecd4af11f",
-                    options: {
-                        command: "teaminfo",
-                        steamid: steamId,
-                        format: " "
-                    }
-                }
-            }
-        } else if (triggers.includes("4cc932cc-8a86-440f-95aa-d8d99a8ac6ec")) {
-            return {
-                type: "rconCommand",
-                attributes: {
-                    command: "4cc932cc-8a86-440f-95aa-d8d99a8ac6ec",
-                    options: {
-                        command: "teaminfo",
-                        steamid: steamId,
-                    }
-                }
-            }
-
         }
     }
 }

@@ -1,5 +1,5 @@
 import { getMyServers, rustApiKeyPermissionBits, setNativeValue } from "./misc.js";
-import { getPcCacheSize } from "./page/cache.js";
+import { getPcCacheSize } from "./page/cache/cache.js";
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
 const allSidebarSlots = [
