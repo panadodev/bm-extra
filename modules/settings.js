@@ -1145,7 +1145,7 @@ function getHotKeySettings(params) {
     )
     showDaysSegment.append(showDaysHotkey, showDaysDuration);
 
-    const resetButton = getResetButton("bm-bans")
+    const resetButton = getResetButton("bm-keybinds")
     element.append(
         privacyEnabled, privacySegment,
         showDaysEnabled, showDaysSegment,
@@ -1674,6 +1674,7 @@ function getResetButton(type) {
         if (type === "bm-identifier") localStorage.setItem("BME_IDENTIFIER_SETTINGS", JSON.stringify(getDefaultIdentifierSettings()));
         if (type === "bm-sidebar") localStorage.setItem("BME_SIDEBAR_SETTINGS", JSON.stringify(getDefaultSidebarSettings()));
         if (type === "bm-bans") localStorage.setItem("BME_BAN_PAGE_SETTINGS", JSON.stringify(getDefaultBanPageSettings()));
+        if (type === "bm-keybinds") localStorage.setItem("BME_BAN_PAGE_SETTINGS", JSON.stringify(getDefaultKeybindsSettings()));
 
         location.reload();
     })
