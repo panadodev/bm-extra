@@ -1,0 +1,84 @@
+name: Create Release
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - ".github/**"
+      - "README.md"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get current version
+        id: get_version
+        run: |
+          VERSION=$(grep -oP '"version":\s*"\K[^"]+' manifest.json)
+          echo "current_version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+
+      - name: Bump version
+        id: bump_version
+        run: |
+          VERSION="${{ steps.get_version.outputs.current_version }}"
+          IFS='.' read -ra PARTS <<< "$VERSION"
+          MAJOR="${PARTS[0]}"
+          MINOR="${PARTS[1]}"
+          PATCH="${PARTS[2]}"
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION"
+
+      - name: Update manifest.json
+        run: |
+          sed -i 's/"version": "${{ steps.get_version.outputs.current_version }}"/"version": "${{ steps.bump_version.outputs.new_version }}"/' manifest.json
+          cat manifest.json
+
+      - name: Create release zip
+        run: |
+          mkdir -p release
+          zip -r release/bm-extra-v${{ steps.bump_version.outputs.new_version }}.zip . \
+            -x ".git/*" \
+            -x ".github/*" \
+            -x "release/*" \
+            -x "*.md"
+
+      - name: Commit version update
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add manifest.json
+          git commit -m "Bump version to ${{ steps.bump_version.outputs.new_version }}" || echo "No changes to commit"
+          git push
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.bump_version.outputs.new_version }}
+          name: Release v${{ steps.bump_version.outputs.new_version }}
+          body: |
+            ## What's Changed
+
+            Release v${{ steps.bump_version.outputs.new_version }}
+
+            ### Installation
+            1. Download the zip file below
+            2. Extract the contents
+            3. Load as unpacked extension in your browser
+          files: release/bm-extra-v${{ steps.bump_version.outputs.new_version }}.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

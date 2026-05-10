@@ -271,13 +271,16 @@ function getAvatarElement(item, zoomable) {
     const lastSeen = item.lastSeen * 1000;
     const iso = new Date(lastSeen).toISOString();
 
+
+    // Commented out the html avatar loading until steamstatic.com can be verified
+    
     //Heavily modified Standard BattleMetrics Identifier
     tr.innerHTML = `
         <td data-title="Identifier">
             <div title="${item.avatar}" class="css-8uhtka bme-avatar-container ${zoomable ? "bme-zoomable-avatar" : ""}">
                 <div class="bme-avatar-placeholder">
                     <div>
-                        <img src="https://avatars.fastly.steamstatic.com/${item.avatar}_full.jpg" class="bme-avatar-identifier">
+                        <!--<img src="https://avatars.fastly.steamstatic.com/${item.avatar}_full.jpg" class="bme-avatar-identifier">-->
                     </div>
                 </div>
                 <span class="css-q39y9k" title="${item.avatar}">${item.avatar}${item.avatarHits !== "N/A" ? ` | Seen on ${item.avatarHits < 101 ? item.avatarHits : "100+"} players` : ""}</span>

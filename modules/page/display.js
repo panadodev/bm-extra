@@ -1,4 +1,4 @@
-import { shouldAbort, getElementWhenAppears, getLastServer, getStreamerModeName, getSteamIdObject, setNativeValue, getIdentifierType, getTimeSpan } from "../misc.js";
+import { getElementWhenAppears, getIdentifierType, getLastServer, getSteamIdObject, getStreamerModeName, getTimeSpan, setNativeValue, shouldAbort } from "../misc.js";
 import { displaySettings } from "../settings.js";
 
 export async function displaySettingsButton(bmId) {
@@ -27,7 +27,8 @@ export async function displayAvatar(bmId, bmProfile, bmSteamData) {
         bmSteamData = await bmSteamData;
         const avatar = bmSteamData?.attributes?.avatar;
         if (!avatar) return;
-        avatarUrl = `https://avatars.fastly.steamstatic.com/${avatar}`.replace(".jpg", "_medium.jpg");
+        // avatarUrl = `https://avatars.fastly.steamstatic.com/${avatar}`.replace(".jpg", "_medium.jpg");
+        return; // Disabled steamstatic.com usage
     }
     if (!avatarUrl) return;
 
