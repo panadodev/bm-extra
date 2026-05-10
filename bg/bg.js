@@ -254,7 +254,7 @@ async function sendWilljumsTeaminfo(values, apiKey, sender, returnObject) {
         const resp = await fetch(`${apiUrl}/${steamId}?server=${serverId}`, {
             method: "GET",
             headers: {
-                "API_TOKEN": apiKey
+                "Authorization": apiKey
             }
         });
 
