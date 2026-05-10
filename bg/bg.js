@@ -25,6 +25,7 @@ chrome.runtime.onMessage.addListener(async (req, sender) => {
     if (req.type.startsWith("BME_BAN_SUMMARIES")) return sendSteamPlayerBanSummaries(req.subject, req.apiKey, sender, returnObject);
     // if (req.type.startsWith("BME_PUBLIC_BANS")) return sendPublicBans(req.subject, req.apiKey, sender, returnObject);
     if (req.type.startsWith("BME_ATLAS_TEAMINFO")) return sendAtlasTeaminfo(req.subject, req.apiKey, sender, returnObject);
+    if (req.type.startsWith("BME_WILLJUMS_TEAMINFO")) return sendWilljumsTeaminfo(req.subject, req.apiKey, sender, returnObject);
 
 })
 
@@ -230,6 +231,34 @@ async function sendAtlasTeaminfo(values, apiKey, sender, returnObject) {
             })
         })
         if (resp?.status !== 200) throw new Error(`Requesting Atlas teaminfo failed | steamId: ${steamId} | API KEY: ${apiKey.substring(0, 10)}... | Status: ${resp?.status}`)
+
+        const data = await resp.json();
+        returnObject.status = "OK";
+        returnObject.value = data;
+        return chrome.tabs.sendMessage(sender.tab.id, returnObject);
+    } catch (error) {
+        console.error(error);
+        returnObject.status = "ERROR";
+        returnObject.value = error;
+        return chrome.tabs.sendMessage(sender.tab.id, returnObject);
+    }
+}
+
+async function sendWilljumsTeaminfo(values, apiKey, sender, returnObject) {
+    try {
+        const parts = values.split("-");
+        const steamId = parts[0];
+        const serverId = parts[1];
+        const apiUrl = parts.slice(2).join("-"); // In case URL contains dashes
+
+        const resp = await fetch(`${apiUrl}/${steamId}?server=${serverId}`, {
+            method: "GET",
+            headers: {
+                "API_TOKEN": apiKey
+            }
+        });
+
+        if (resp?.status !== 200) throw new Error(`Requesting Willjums teaminfo failed | steamId: ${steamId} | API KEY: ${apiKey.substring(0, 10)}... | Status: ${resp?.status}`);
 
         const data = await resp.json();
         returnObject.status = "OK";

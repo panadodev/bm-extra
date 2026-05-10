@@ -145,22 +145,10 @@ class Willjums {
             return "error";
         }
 
-        const resp = await fetch(`${apiUrl}/${steamId}?server=${serverId}`, {
-            method: "GET",
-            headers: {
-                "API_TOKEN": token
-            }
-        });
-
-        if (resp.status !== 200) {
-            console.error(`Failed to request teaminfo | Status: ${resp.status}`);
-            return "error";
-        }
-
-        const data = await resp.json();
+        const data = await talkToBackgroundScript("BME_WILLJUMS_TEAMINFO", `${steamId}-${serverId}-${apiUrl}`, token);
         const result = data?.raw;
         if (!result) {
-            console.error(`Failed to request teaminfo | Status: ${resp.status} | Result: ${result}`);
+            console.error(`Failed to request teaminfo | Result: ${result}`);
             return "error";
         }
 
