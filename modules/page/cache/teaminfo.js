@@ -131,6 +131,47 @@ class BattleZone {
     }
 }
 
+class Willjums {
+    id = "30126";
+
+    static {
+        organizations.push(new this());
+    }
+
+    async getTeamInfo(steamId, serverId, token) {
+        const apiUrl = localStorage.getItem("BME_TEAMINFO_API_URL");
+        if (!apiUrl) {
+            console.error("Teaminfo API URL is not configured");
+            return "error";
+        }
+
+        const resp = await fetch(`${apiUrl}/${steamId}?server=${serverId}`, {
+            method: "GET",
+            headers: {
+                "API_TOKEN": token
+            }
+        });
+
+        if (resp.status !== 200) {
+            console.error(`Failed to request teaminfo | Status: ${resp.status}`);
+            return "error";
+        }
+
+        const data = await resp.json();
+        const result = data?.raw;
+        if (!result) {
+            console.error(`Failed to request teaminfo | Status: ${resp.status} | Result: ${result}`);
+            return "error";
+        }
+
+        return result;
+    }
+}
+
+
+
+
+
 /*
 class ExampleOrganization {
     id = "1234";

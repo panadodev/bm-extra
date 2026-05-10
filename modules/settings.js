@@ -1173,6 +1173,9 @@ function getApiKeysSettings() {
         detail: "OPTIONAL: Provided key will take priority, it isn't necessary."
     });
     const rustApiKeyElement = getApiKeyDiv("Rust API Key:", "BME_RUST_API_KEY", "rust-api");
+    const teaminfoApiUrlElement = getApiKeyDiv("Teaminfo API URL:", "BME_TEAMINFO_API_URL", "teaminfo-api", {
+        detail: "URL endpoint for teaminfo API"
+    });
 
     const proxyCheckSegment = document.createElement("div")
     proxyCheckSegment.classList.add("bme-settings-segment");
@@ -1224,6 +1227,7 @@ function getApiKeysSettings() {
 
     element.append(
         steamKeyElement, battleMetricsKeyElements, rustApiKeyElement,
+        teaminfoApiUrlElement,
         proxyCheckApiKeyElement, proxyCheckSegment,
         getSmUpdater()
     );

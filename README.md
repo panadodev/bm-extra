@@ -2,7 +2,7 @@
 Chromium-based BattleMetrics extension providing quality-of-life features for Rust admins.
 
 ## Installation
-1. Download: Go to the [Github repository](https://github.com/FlQyD/bm-extra) and download the latest release.
+1. Download the latest release.
 2. Unpack the ZIP file.
 3. Open Chrome Extensions Settings: Navigate to `chrome://extensions/` in Google Chrome.
 4. Click `Load Unpacked` and select the unpacked `bm-extra` directory.
@@ -42,6 +42,3 @@ Not all features require API keys but whichever does you can obtain the keys fro
 - **BattleMetrics API Key**: [Developer Page](https://www.battlemetrics.com/developers)
 
 If you want to use Streamer Mode names, go to the settings and upload the file `C:\Program Files (x86)\Steam\steamapps\common\Rust\RustClient_Data\StreamingAssets\RandomUsernames.json` from the game files. This contains the list of the used Streamer Mode names.
-
-## Contact
-For any questions or to report any issue, please contact me on discord: [flqyd](https://discord.com/users/1094976844027134113)
