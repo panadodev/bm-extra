@@ -145,7 +145,13 @@ class Willjums {
             return "error";
         }
 
-        const data = await talkToBackgroundScript("BME_WILLJUMS_TEAMINFO", `${steamId}-${serverId}-${apiUrl}`, token);
+        const apiToken = localStorage.getItem("BME_TEAMINFO_API_TOKEN");
+        if (!apiToken) {
+            console.error("Teaminfo API Token is not configured");
+            return "error";
+        }
+
+        const data = await talkToBackgroundScript("BME_WILLJUMS_TEAMINFO", `${steamId}-${serverId}-${apiUrl}`, apiToken);
         const result = data?.raw;
         if (!result) {
             console.error(`Failed to request teaminfo | Result: ${result}`);

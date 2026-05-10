@@ -1173,9 +1173,18 @@ function getApiKeysSettings() {
         detail: "OPTIONAL: Provided key will take priority, it isn't necessary."
     });
     const rustApiKeyElement = getApiKeyDiv("Rust API Key:", "BME_RUST_API_KEY", "rust-api");
+
+    const teaminfoSegment = document.createElement("div")
+    teaminfoSegment.classList.add("bme-settings-segment");
     const teaminfoApiUrlElement = getApiKeyDiv("Teaminfo API URL:", "BME_TEAMINFO_API_URL", "teaminfo-api", {
-        detail: "URL endpoint for teaminfo API"
+        segment: teaminfoSegment,
+        detail: "URL endpoint for teaminfo API (e.g., https://api.panado.dev/get-teaminfo)"
     });
+
+    const teaminfoApiTokenElement = getApiKeyDiv("Teaminfo API Token:", "BME_TEAMINFO_API_TOKEN", "teaminfo-token", {
+        detail: "API token for teaminfo API authentication"
+    });
+    teaminfoSegment.append(teaminfoApiTokenElement);
 
     const proxyCheckSegment = document.createElement("div")
     proxyCheckSegment.classList.add("bme-settings-segment");
@@ -1227,7 +1236,7 @@ function getApiKeysSettings() {
 
     element.append(
         steamKeyElement, battleMetricsKeyElements, rustApiKeyElement,
-        teaminfoApiUrlElement,
+        teaminfoApiUrlElement, teaminfoSegment,
         proxyCheckApiKeyElement, proxyCheckSegment,
         getSmUpdater()
     );
