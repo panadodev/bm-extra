@@ -13,7 +13,7 @@ export function getInfoPanel(bmSteamData, bmData, rustPremium, bmId) {
         if (arrow.classList.contains("closed")) {
             body.style.height = "0px";
         } else {
-            body.style.height = "320px";
+            body.style.height = "280px";
         }
     })
     element.appendChild(header);
@@ -237,23 +237,6 @@ function getBmInfoPanel(bm, bmId) {
     items.push(...getBmRustHoursElements(bm, settings.bmRustHoursColors))
     items.push(...getAimTrainingElements(bm, settings.aimTrainColors));
 
-    const eacTitle = createHtmlElement("dt", "EAC Banned Alts:");
-    const eacValue = createHtmlElement("dd", "");
-    const eacButton = createHtmlElement("a", "Click to check");
-    eacButton.style.cursor = "pointer";
-    eacValue.appendChild(eacButton);
-    eacButton.onclick = () => {
-        const BMToken = localStorage.getItem("BME_BATTLEMETRICS_API_KEY");
-        chrome.runtime.sendMessage({ type: "GetEACBannedAlts", BMID: bmId, BMToken });
-        eacValue.innerText = "Loading...";
-        function eacHandler(message) {
-            if (message.type !== "GetEACBannedAlts") return;
-            chrome.runtime.onMessage.removeListener(eacHandler);
-            renderAltCheckResults(eacValue, message.response);
-        }
-        chrome.runtime.onMessage.addListener(eacHandler);
-    };
-
     const bmAltTitle = createHtmlElement("dt", "BM Banned Alts:");
     const bmAltValue = createHtmlElement("dd", "");
     const bmAltButton = createHtmlElement("a", "Click to check");
@@ -271,7 +254,7 @@ function getBmInfoPanel(bm, bmId) {
         chrome.runtime.onMessage.addListener(bmAltHandler);
     };
 
-    items.push(eacTitle, eacValue, bmAltTitle, bmAltValue);
+    items.push(bmAltTitle, bmAltValue);
     for (const item of items) list.appendChild(item);
 
     return element;
