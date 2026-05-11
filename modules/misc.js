@@ -101,18 +101,8 @@ export async function getSteamFriendlistFromSteam(steamId) {
     }
 }
 export async function getSteamFriendlistFromRustApi(steamId) {
-    try {
-        const RUST_API_KEY = localStorage.getItem("BME_RUST_API_KEY");
-        if (!RUST_API_KEY) return "NO_API_KEY";
-        if (RUST_API_KEY.length !== 64) return "INVALID_API_KEY";
-        if (RUST_API_KEY[rustApiKeyPermissionBits.historicFriends] !== "1") return "MISSING_PERMISSION"
-
-        return await talkToBackgroundScript("BME_RUST_API_FRIENDLIST", steamId, RUST_API_KEY);
-    } catch (error) {
-        console.error(error);
-        if (error.message === "TIMEOUT") return "TIMEOUT";
-        return "ERROR";
-    }
+    // DISABLED: rust-api.flqyd.dev is no longer in use
+    return "DISABLED";
 }
 
 export function getStreamerModeName(steamId) {

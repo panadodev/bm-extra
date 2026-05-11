@@ -1,4 +1,4 @@
-import { getAuthToken, getLastServer, getSteamFriendlistFromRustApi, getSteamFriendlistFromSteam, rustApiKeyPermissionBits, talkToBackgroundScript } from "../../misc.js";
+import { getAuthToken, getLastServer, getSteamFriendlistFromRustApi, getSteamFriendlistFromSteam, talkToBackgroundScript } from "../../misc.js";
 import { updatePlayerProfileElements } from "../../sidebar.js";
 import { organizations } from "./teaminfo.js";
 
@@ -404,16 +404,8 @@ async function getSteamAvatars(bmProfile) {
     return avatars;
 }
 async function getAvatarsFromRustApi(steamId) {
-    try {
-        const rustApiKey = localStorage.getItem("BME_RUST_API_KEY");
-        if (!rustApiKey) return "NO_API_KEY";
-        if (rustApiKey[rustApiKeyPermissionBits.historicAvatars] !== "1") return "NO_PERMISSION";
-
-        return await talkToBackgroundScript("BME_RUST_API_AVATARS", steamId, rustApiKey)
-    } catch (error) {
-        console.error(error);
-        return "ERROR";
-    }
+    // DISABLED: rust-api.flqyd.dev is no longer in use
+    return "DISABLED";
 }
 
 async function getCurrentTeam(bmProfile, authToken) {
