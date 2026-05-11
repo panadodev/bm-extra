@@ -1,6 +1,6 @@
 import { getTimeSpan } from "../../misc.js";
 
-export function getInfoPanel(bmSteamData, bmData, rustPremium) {
+export function getInfoPanel(bmSteamData, bmData, rustPremium, bmId) {
     const element = document.createElement("div");
 
     const header = document.createElement("div");
@@ -13,7 +13,7 @@ export function getInfoPanel(bmSteamData, bmData, rustPremium) {
         if (arrow.classList.contains("closed")) {
             body.style.height = "0px";
         } else {
-            body.style.height = "260px";
+            body.style.height = "320px";
         }
     })
     element.appendChild(header);
@@ -32,7 +32,7 @@ export function getInfoPanel(bmSteamData, bmData, rustPremium) {
     element.appendChild(body);
 
     body.appendChild(getSteamInfoPanel(bmSteamData, rustPremium));
-    body.appendChild(getBmInfoPanel(bmData));
+    body.appendChild(getBmInfoPanel(bmData, bmId));
 
     return element;
 }
@@ -212,7 +212,7 @@ function getHistoricTimestampElements(steam, settings) {
 
 
 
-function getBmInfoPanel(bm) {
+function getBmInfoPanel(bm, bmId) {
     const settings = JSON.parse(localStorage.getItem("BME_BM_INFO_SETTINGS"))
     const element = document.createElement("div");
 
@@ -236,6 +236,42 @@ function getBmInfoPanel(bm) {
     items.push(...getServerCountElements(bm, settings.serverCountColors))
     items.push(...getBmRustHoursElements(bm, settings.bmRustHoursColors))
     items.push(...getAimTrainingElements(bm, settings.aimTrainColors));
+
+    const eacTitle = createHtmlElement("dt", "EAC Banned Alts:");
+    const eacValue = createHtmlElement("dd", "");
+    const eacButton = createHtmlElement("a", "Click to check");
+    eacButton.style.cursor = "pointer";
+    eacValue.appendChild(eacButton);
+    eacButton.onclick = () => {
+        const BMToken = localStorage.getItem("BME_BATTLEMETRICS_API_KEY");
+        chrome.runtime.sendMessage({ type: "GetEACBannedAlts", BMID: bmId, BMToken });
+        eacValue.innerText = "Loading...";
+        function eacHandler(message) {
+            if (message.type !== "GetEACBannedAlts") return;
+            chrome.runtime.onMessage.removeListener(eacHandler);
+            renderAltCheckResults(eacValue, message.response);
+        }
+        chrome.runtime.onMessage.addListener(eacHandler);
+    };
+
+    const bmAltTitle = createHtmlElement("dt", "BM Banned Alts:");
+    const bmAltValue = createHtmlElement("dd", "");
+    const bmAltButton = createHtmlElement("a", "Click to check");
+    bmAltButton.style.cursor = "pointer";
+    bmAltValue.appendChild(bmAltButton);
+    bmAltButton.onclick = () => {
+        const BMToken = localStorage.getItem("BME_BATTLEMETRICS_API_KEY");
+        chrome.runtime.sendMessage({ type: "GetBMBannedAlts", BMID: bmId, BMToken });
+        bmAltValue.innerText = "Loading...";
+        function bmAltHandler(message) {
+            if (message.type !== "GetBMBannedAlts") return;
+            chrome.runtime.onMessage.removeListener(bmAltHandler);
+            renderAltCheckResults(bmAltValue, message.response);
+        }
+        chrome.runtime.onMessage.addListener(bmAltHandler);
+    };
+
+    items.push(eacTitle, eacValue, bmAltTitle, bmAltValue);
     for (const item of items) list.appendChild(item);
 
     return element;
@@ -399,4 +435,25 @@ function getBmInfoTimeString(timestamp) {
     if (timestamp > ONE_MINUTE) return `${Math.floor(timestamp / ONE_MINUTE)} minutes`;
     if (timestamp > ONE_SECOND) return `${Math.floor(timestamp / ONE_SECOND)} seconds`
     return NaN;
+}
+
+function renderAltCheckResults(element, results) {
+    if (!results || !Array.isArray(results)) {
+        element.innerText = "Error";
+        return;
+    }
+    if (results.length === 0) {
+        element.innerText = "None";
+        return;
+    }
+    element.innerHTML = "";
+    element.appendChild(document.createTextNode(`${results.length}: `));
+    results.forEach((player, i) => {
+        if (i > 0) element.appendChild(document.createTextNode(", "));
+        const link = document.createElement("a");
+        link.href = `https://www.battlemetrics.com/rcon/players/${player.id}`;
+        link.target = "_blank";
+        link.innerText = player.name || player.id;
+        element.appendChild(link);
+    });
 }

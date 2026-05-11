@@ -256,3 +256,99 @@ async function sendWilljumsTeaminfo(values, apiKey, sender, returnObject) {
         return chrome.tabs.sendMessage(sender.tab.id, returnObject);
     }
 }
+
+chrome.runtime.onMessage.addListener(async (request, sender) => {
+    if (request.type === "GetEACBannedAlts") {
+        const relatedPlayers = await getRelatedPlayers(request.BMToken, request.BMID);
+        if (relatedPlayers === undefined) return;
+
+        chrome.tabs.sendMessage(sender.tab.id, {
+            type: "GetEACBannedAlts",
+            response: await getEACBannedAltsBulk(request.BMToken, relatedPlayers),
+        });
+    } else if (request.type === "GetBMBannedAlts") {
+        const relatedPlayers = await getRelatedPlayers(request.BMToken, request.BMID);
+        if (relatedPlayers === undefined) return;
+
+        chrome.tabs.sendMessage(sender.tab.id, {
+            type: "GetBMBannedAlts",
+            response: await getBMBannedAltsBulk(request.BMToken, relatedPlayers),
+        });
+    }
+});
+
+async function getRelatedPlayers(BMToken, BMID) {
+    try {
+        const response = await fetch(`https://api.battlemetrics.com/players/${BMID}/relationships/related-identifiers?version=%5E0.1.0&access_token=${BMToken}`);
+        if (!response.ok) return undefined;
+
+        const data = await response.json();
+        const relatedIDs = {};
+
+        for (const identifier of data.data) {
+            for (const relatedPlayer of identifier.relationships.relatedPlayers.data) {
+                if (relatedIDs[relatedPlayer.id] === undefined) {
+                    relatedIDs[relatedPlayer.id] = 1;
+                } else {
+                    relatedIDs[relatedPlayer.id]++;
+                }
+            }
+        }
+
+        const relatedPlayers = Object.entries(relatedIDs).sort((a, b) => b[1] - a[1]);
+        if (relatedPlayers.length > 12) relatedPlayers.length = 12;
+        return relatedPlayers;
+    } catch (error) {
+        console.error(error);
+        return undefined;
+    }
+}
+
+async function getEACBannedAltsBulk(BMToken, relatedPlayers) {
+    const results = [];
+    for (const [playerId, matchCount] of relatedPlayers) {
+        try {
+            const resp = await fetch(`https://api.battlemetrics.com/players/${playerId}?version=%5E0.1.0&include=identifier&access_token=${BMToken}`);
+            if (!resp.ok) continue;
+
+            const data = await resp.json();
+            const identifiers = data.included || [];
+            const hasEACBan = identifiers.some(id =>
+                id.attributes?.type === "EAC" && id.attributes?.metadata?.ebanned === true
+            );
+
+            if (hasEACBan) {
+                results.push({ id: playerId, name: data.data?.attributes?.name || playerId, matchCount });
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    }
+    return results;
+}
+
+async function getBMBannedAltsBulk(BMToken, relatedPlayers) {
+    const results = [];
+    for (const [playerId, matchCount] of relatedPlayers) {
+        try {
+            const resp = await fetch(`https://api.battlemetrics.com/bans?version=%5E0.1.0&filter[player]=${playerId}&access_token=${BMToken}`);
+            if (!resp.ok) continue;
+
+            const data = await resp.json();
+            if (!data.data?.length) continue;
+
+            const playerResp = await fetch(`https://api.battlemetrics.com/players/${playerId}?version=%5E0.1.0&access_token=${BMToken}`);
+            const playerData = playerResp.ok ? await playerResp.json() : null;
+
+            results.push({
+                id: playerId,
+                name: playerData?.data?.attributes?.name || playerId,
+                matchCount,
+                banCount: data.data.length,
+            });
+        } catch (error) {
+            console.error(error);
+        }
+    }
+    return results;
+}

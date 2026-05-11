@@ -1,5 +1,5 @@
+import { getElementWhenAppears, getSteamIdObject, getTimeSpan, shouldAbort } from "../../misc.js";
 import { getInfoPanel } from "./getInfoPanel.js";
-import { shouldAbort, getElementWhenAppears, getTimeSpan, getSteamIdObject } from "../../misc.js";
 
 export async function displayServerActivity(bmId, bmProfile) {
     bmProfile = await bmProfile;
@@ -92,7 +92,7 @@ export async function displayInfoPanel(bmId, bmProfile, steamData, bmActivity, r
 
     if (!identifierDiv) return;
 
-    const infoPanel = getInfoPanel(bmSteamData, bmData, rustPremium);
+    const infoPanel = getInfoPanel(bmSteamData, bmData, rustPremium, bmId);
     infoPanel.id = "bme-info-panel";
 
     if (shouldAbort(bmId, "bme-info-panel")) return;
