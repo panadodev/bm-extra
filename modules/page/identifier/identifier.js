@@ -57,16 +57,22 @@ function convertIdentifier(identifier, ipObject, padEndValues, requestProxyCheck
     const asnValue = `${ipObject.asn || ipObject.proxyCheck?.net?.asn || "N/A"}`.padEnd(padEndValues.asn);
 
     const conTypeValue = getConType(ipObject.proxyCheck);
-    const conTypeString = conTypeValue && typeof (conTypeValue) === "object" ?
-        `<span class="${conTypeValue.color}">${conTypeValue.value}</span>` :
-        conTypeValue;
 
-    let text = `${ipValue}  |  ISP: ${ispValue}  |  ${asnValue}`;
-    if (requestProxyCheck) text += `  |  ${conTypeString || ""}`
-    ipElement.innerHTML = text;
-    if (!conTypeString && requestProxyCheck) {
-        const pcButton = getPcButton(identifier, ipObject, padEndValues, requestProxyCheck);
-        ipElement.after(pcButton);
+    const text = `${ipValue}  |  ISP: ${ispValue}  |  ${asnValue}`;
+    ipElement.textContent = text;
+
+    if (requestProxyCheck) {
+        if (conTypeValue && typeof conTypeValue === "object") {
+            const conSpan = document.createElement("span");
+            conSpan.classList.add(conTypeValue.color);
+            conSpan.textContent = conTypeValue.value;
+            ipElement.append("  |  ", conSpan);
+        } else if (conTypeValue) {
+            ipElement.append(`  |  ${conTypeValue}`);
+        } else {
+            const pcButton = getPcButton(identifier, ipObject, padEndValues, requestProxyCheck);
+            ipElement.after(pcButton);
+        }
     }
 
     if (!ipObject.proxyCheck) return;
@@ -274,16 +280,21 @@ function getAvatarElement(item, zoomable) {
 
     // Commented out the html avatar loading until steamstatic.com can be verified
     
+    // Escape avatar hash before injecting into HTML (it comes from external API)
+    const escapedAvatar = document.createElement("span");
+    escapedAvatar.textContent = item.avatar;
+    const safeAvatar = escapedAvatar.innerHTML; // HTML-entity-encoded
+
     //Heavily modified Standard BattleMetrics Identifier
     tr.innerHTML = `
         <td data-title="Identifier">
-            <div title="${item.avatar}" class="css-8uhtka bme-avatar-container ${zoomable ? "bme-zoomable-avatar" : ""}">
+            <div title="${safeAvatar}" class="css-8uhtka bme-avatar-container ${zoomable ? "bme-zoomable-avatar" : ""}">
                 <div class="bme-avatar-placeholder">
                     <div>
-                        <!--<img src="https://avatars.fastly.steamstatic.com/${item.avatar}_full.jpg" class="bme-avatar-identifier">-->
+                        <!--<img src="https://avatars.fastly.steamstatic.com/${safeAvatar}_full.jpg" class="bme-avatar-identifier">-->
                     </div>
                 </div>
-                <span class="css-q39y9k" title="${item.avatar}">${item.avatar}${item.avatarHits !== "N/A" ? ` | Seen on ${item.avatarHits < 101 ? item.avatarHits : "100+"} players` : ""}</span>
+                <span class="css-q39y9k" title="${safeAvatar}">${safeAvatar}${item.avatarHits !== "N/A" ? ` | Seen on ${item.avatarHits < 101 ? item.avatarHits : "100+"} players` : ""}</span>
             </div>
         </td>
         <td data-title="Type">

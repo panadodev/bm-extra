@@ -516,7 +516,10 @@ function getBanElement(ban) {
     const reason = document.createElement("p");
     reason.classList.add("bme-sidebar-ban-reason")
     reason.title = ban.reason;
-    reason.innerHTML = `<span class="bme-bold">${ban.reason}</span>`;
+    const reasonBold = document.createElement("span");
+    reasonBold.classList.add("bme-bold");
+    reasonBold.textContent = ban.reason;
+    reason.appendChild(reasonBold);
     element.appendChild(reason);
 
     const innerDiv = document.createElement("div")
@@ -524,7 +527,10 @@ function getBanElement(ban) {
     element.appendChild(innerDiv)
 
     const org = document.createElement("p");
-    org.innerHTML = `<span class="bme-bold">Org:</span> ${ban?.org?.name}`;
+    const orgLabel = document.createElement("span");
+    orgLabel.classList.add("bme-bold");
+    orgLabel.textContent = "Org:";
+    org.append(orgLabel, ` ${ban?.org?.name ?? ""}`);
     innerDiv.appendChild(org);
 
     /*const details = document.createElement("div");

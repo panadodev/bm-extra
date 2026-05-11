@@ -43,7 +43,11 @@ function getCurrentServersElement(servers) {
 
         const firstLine = document.createElement("p");
         const prefix = server.online ? "Current server" : "Last server";
-        firstLine.innerHTML = `${prefix}: <a href="https://www.battlemetrics.com/rcon/servers/${server.id}" target="_blank">${server.name}</a> (${server.pop.current}/${server.pop.max})`
+        const serverLink = document.createElement("a");
+        serverLink.href = `https://www.battlemetrics.com/rcon/servers/${server.id}`;
+        serverLink.target = "_blank";
+        serverLink.textContent = server.name;
+        firstLine.append(`${prefix}: `, serverLink, ` (${server.pop.current}/${server.pop.max})`);
         element.appendChild(firstLine);
 
         const secondLine = document.createElement("p");
@@ -289,9 +293,11 @@ function convertBanSpan(ban, span) {
     const lengthText = length === 0 ? `Permanent` : `${Math.round(length / ONE_DAY * 10) / 10} days`;
     const lengthString = active ? `<b>${lengthText}</b>` : `${lengthText}`;
 
+    const reasonEl = document.createElement("b");
+    reasonEl.textContent = banReason;
     const stringArray = [
         `${getTimeSpan(timestamp)} ago`,
-        `<b>${banReason}</b>`,
+        reasonEl.outerHTML,
         `${active === true ? "<b>Active</b>" : "Expired"}`,
         lengthString
     ]
@@ -309,12 +315,17 @@ export async function displayAlertLink(bmId) {
     for (const navElement of navbar) {
         if (navElement.innerText.trim() !== "Ban Player") continue
         const link = document.createElement("li");
-        link.classList.add("bme-alert-element")
-        link.innerHTML = `
-        <a href="/alerts/add?player=${bmId}" target="_blank">
-            <img class="bme-alert-icon" src="${chrome.runtime.getURL("assets/img/add-alert.png")}">
-            <p>Add Alert</p>
-        </a>`;
+        link.classList.add("bme-alert-element");
+        const anchor = document.createElement("a");
+        anchor.href = `/alerts/add?player=${bmId}`;
+        anchor.target = "_blank";
+        const alertImg = document.createElement("img");
+        alertImg.className = "bme-alert-icon";
+        alertImg.src = chrome.runtime.getURL("assets/img/add-alert.png");
+        const alertText = document.createElement("p");
+        alertText.textContent = "Add Alert";
+        anchor.append(alertImg, alertText);
+        link.appendChild(anchor);
         navElement.before(link);
         return;
     }
