@@ -1,3 +1,6 @@
+### Please note:
+All credit goes to the original auther, this is a fork of that repo.
+
 # bm-extra
 Chromium-based BattleMetrics extension providing quality-of-life features for Rust admins.
 

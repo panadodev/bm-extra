@@ -645,19 +645,34 @@ async function banPresetButtonClicked(preset, bmProfile, pasteEvidence) {
         setNativeValue(banReasonElement, banReason, true);
     }
 
-    const rich = await readClipboardRich();
-    if (rich && pasteEvidence) {
-        const banNote = await getElementWhenAppears("tiptap", true);
-        if (banNote.innerText.trim() !== "") return;
+    const banNote = preset.note;
+    if (banNote && banNote !== "default") {
+        const banNoteElement = await getElementWhenAppears("tiptap", true);
+        if (banNoteElement.innerText.trim() === "") {
+            const data = new DataTransfer();
+            data.setData("text/plain", banNote);
 
-        const data = new DataTransfer();
-        data.setData("text/html", rich.value);
+            banNoteElement.dispatchEvent(new ClipboardEvent("paste", {
+                clipboardData: data,
+                bubbles: true,
+                cancelable: true
+            }));
+        }
+    } else {
+        const rich = await readClipboardRich();
+        if (rich && pasteEvidence) {
+            const banNoteElement = await getElementWhenAppears("tiptap", true);
+            if (banNoteElement.innerText.trim() !== "") return;
 
-        banNote.dispatchEvent(new ClipboardEvent("paste", {
-            clipboardData: data,
-            bubbles: true,
-            cancelable: true
-        }));
+            const data = new DataTransfer();
+            data.setData("text/html", rich.value);
+
+            banNoteElement.dispatchEvent(new ClipboardEvent("paste", {
+                clipboardData: data,
+                bubbles: true,
+                cancelable: true
+            }));
+        }
     }
 
 }

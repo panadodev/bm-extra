@@ -68,6 +68,7 @@ function getSteamInfoPanel(steam, rustPremium) {
     items.push(...getSteamCombinedHoursElements(steam, settings.steamCombinedHoursColors, isHistoric));
     items.push(...getSteamGameCountElements(steam, settings.steamGameCountColors, isHistoric));
     if (isHistoric) items.push(...getHistoricTimestampElements(steam, settings.gamesLastCheckedColors))
+    items.push(...getSteamIdComElements(steam));
     for (const item of items) list.appendChild(item);
 
 
@@ -211,6 +212,30 @@ function getHistoricTimestampElements(steam, settings) {
 }
 
 
+
+function getSteamIdComElements(steam) {
+    const title = createHtmlElement("dt", "SteamID.com:");
+
+    if (!steam?.steamId) {
+        const value = createHtmlElement("dd", "Unknown");
+        return [title, value];
+    }
+
+    const value = document.createElement("dd");
+    const img = document.createElement("img");
+    img.width = 16;
+    img.height = 16;
+    img.src = "https://cdn.battlemetrics.com/app/assets/steamid.0607f.svg";
+    const link = document.createElement("a");
+    link.href = `https://www.steamid.com/profiles/${steam.steamId}`;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.innerText = "SteamID.com";
+    value.appendChild(img);
+    value.appendChild(document.createTextNode(" "));
+    value.appendChild(link);
+    return [title, value];
+}
 
 function getBmInfoPanel(bm, bmId) {
     const settings = JSON.parse(localStorage.getItem("BME_BM_INFO_SETTINGS"))
