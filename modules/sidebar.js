@@ -314,9 +314,9 @@ function getPlayerElement(player, settings) {
     if (player?.origin === "friend") container.style.background = settings.historicFriends.seenOnFriend;
 
     const avatar = document.createElement("img");
-    // avatar.src = avatarValue === "unknown" ?
-    //     `https://avatars.cloudflare.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_full.jpg` :
-    //     `https://avatars.cloudflare.steamstatic.com/${avatarValue}_full.jpg`;
+    avatar.src = avatarValue === "unknown" ?
+        `https://avatars.cloudflare.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_full.jpg` :
+        `https://avatars.cloudflare.steamstatic.com/${avatarValue}_full.jpg`;
     container.appendChild(avatar);
 
     const details = document.createElement("div");
