@@ -233,6 +233,20 @@ export async function limitItem(bmId, limit, item) {
     }
 }
 
+export async function hideIpOnProfile(bmId) {
+    const identifierWrapper = (await getElementWhenAppears("css-11gv980", true));
+    const identifierTable = identifierWrapper?.lastChild?.children;
+    if (!identifierTable) return console.error("BM-EXTRA: identifierTable is missing!");
+
+    for (const identifier of identifierTable) {
+        const type = identifier?.children[1]?.firstChild?.innerText;
+        if (type !== "IP") continue;
+        if (shouldAbort(bmId, null, "overview")) return;
+        const ipEl = identifier.querySelector(".css-q39y9k");
+        if (ipEl) ipEl.style.visibility = "hidden";
+    }
+}
+
 export async function advancedBans(bmId, banDataP) {
     const banData = await banDataP
 

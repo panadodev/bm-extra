@@ -160,12 +160,17 @@ function getOverviewSettings() {
         "The maximum number of IP addresses allowed to be showed in the overview section.",
         null, settingsBucket, "maxIps", settings.maxIps
     )
+    const hideIp = getSettingsElement(
+        "toggle", "Hide IP address",
+        "Hides the player's IP address on the profile overview page.",
+        null, settingsBucket, "hideIp", settings.hideIp
+    )
     const resetButton = getResetButton("bm-overview");
 
     element.append(
         showAvatar, showAlert, showBmInfo, removeSteamInfo, showServer,
         advancedBans, closeAdminLog, swapBattleEyeGuid,
-        maxNamesOnProfile, maxIpsOnProfile,
+        maxNamesOnProfile, maxIpsOnProfile, hideIp,
 
         resetButton
     );
@@ -1719,6 +1724,7 @@ function checkOverviewSettings() {
         if (typeof (settings.swapBattleEyeGuid) !== "boolean") throw new Error("Settings error");
         if (typeof (settings.maxNames) !== "number") throw new Error("Settings error");
         if (typeof (settings.maxIps) !== "number") throw new Error("Settings error");
+        if (typeof (settings.hideIp) !== "boolean") throw new Error("Settings error");
     } catch (error) {
         const defaultSettings = getDefaultOverviewSettings();
         localStorage.setItem("BME_OVERVIEW_SETTINGS", JSON.stringify(defaultSettings));
@@ -1736,6 +1742,7 @@ function getDefaultOverviewSettings() {
     settings.swapBattleEyeGuid = false;
     settings.maxNames = -1;
     settings.maxIps = -1;
+    settings.hideIp = false;
     return settings;
 }
 function checkIdentifierSettings() {

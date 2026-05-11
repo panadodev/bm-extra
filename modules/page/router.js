@@ -1,10 +1,10 @@
-import { setupCacheFor, cache } from "../page/cache/cache.js";
-import { checkAndSetupSettingsIfMissing } from "../settings.js";
-import { advancedBans, closeAdminLog, displayInfoPanel, displayServerActivity, limitItem, removeSteamInformation, displayAlertLink } from "./overview/overview.js";
-import { highlightVpnIdentifiers, showExtraDataOnIps, displayAvatars } from "./identifier/identifier.js";
-import { convertTimestampsToDay, displayAvatar, displaySettingsButton, redactIdentifiers, selectLastServer, swapBattleEyeGuid } from "./display.js";
-import { insertBanPresets, insertFriendComparator, insertFriendsSidebarElement, insertHistoricFriendsSidebarElement, insertPublicBansSidebarElement, insertSidebars, insertTeaminfoSidebarElement } from "../sidebar.js";
 import { removeSidebars } from "../misc.js";
+import { cache, setupCacheFor } from "../page/cache/cache.js";
+import { checkAndSetupSettingsIfMissing } from "../settings.js";
+import { insertBanPresets, insertFriendComparator, insertFriendsSidebarElement, insertHistoricFriendsSidebarElement, insertPublicBansSidebarElement, insertSidebars, insertTeaminfoSidebarElement } from "../sidebar.js";
+import { convertTimestampsToDay, displayAvatar, displaySettingsButton, redactIdentifiers, selectLastServer, swapBattleEyeGuid } from "./display.js";
+import { displayAvatars, highlightVpnIdentifiers, showExtraDataOnIps } from "./identifier/identifier.js";
+import { advancedBans, closeAdminLog, displayAlertLink, displayInfoPanel, displayServerActivity, hideIpOnProfile, limitItem, removeSteamInformation } from "./overview/overview.js";
 
 let settingsChecked = false;
 export function router(url) {
@@ -61,6 +61,7 @@ async function onOverviewPage(bmId) {
     if (settings.swapBattleEyeGuid) swapBattleEyeGuid(bmId, playerCache.bmProfile);
     if (settings.maxNames > 0) limitItem(bmId, settings.maxNames, "Name");
     if (settings.maxIps > 0) limitItem(bmId, settings.maxIps, "IP");
+    if (settings.hideIp) hideIpOnProfile(bmId);
 }
 async function onIdentifierPage(bmId) {
     const settings = JSON.parse(localStorage.getItem("BME_IDENTIFIER_SETTINGS"))
