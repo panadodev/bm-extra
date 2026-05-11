@@ -20,7 +20,7 @@ chrome.runtime.onMessage.addListener(async (req, sender) => {
     // if (req.type.startsWith("BME_RUST_API_FRIENDLIST")) return sendFriendlistFromRustApi(req.subject, req.apiKey, sender, returnObject)
     // if (req.type.startsWith("BME_RUST_API_AVATARS")) return sendAvatarsFromRustApi(req.subject, req.apiKey, sender, returnObject)
     if (req.type.startsWith("BME_PREMIUM_STATUS")) return sendPremiumStatus(req.subject, sender, returnObject)
-    // if (req.type.startsWith("BME_PROXYCHECK")) return sendProxyCheck(req.subject, req.apiKey, sender, returnObject)
+    if (req.type.startsWith("BME_PROXYCHECK")) return sendProxyCheck(req.subject, req.apiKey, sender, returnObject)
     if (req.type.startsWith("BME_PLAYER_SUMMARIES")) return sendSteamPlayerSummaries(req.subject, req.apiKey, sender, returnObject);
     if (req.type.startsWith("BME_BAN_SUMMARIES")) return sendSteamPlayerBanSummaries(req.subject, req.apiKey, sender, returnObject);
     // if (req.type.startsWith("BME_PUBLIC_BANS")) return sendPublicBans(req.subject, req.apiKey, sender, returnObject);
@@ -106,23 +106,23 @@ async function sendPremiumStatus(steamId, sender, returnObject) {
         return chrome.tabs.sendMessage(sender.tab.id, returnObject);
     }
 }
-// async function sendProxyCheck(ips, apiKey, sender, returnObject) {
-//     try {
-//         const resp = await fetch(`http://proxycheck.io/v3/${ips}?key=${apiKey}`);
-//         if (resp?.status !== 200) throw new Error(`Requesting Proxycheck data failed | API KEY: ${apiKey.substring(0, 10)}... | Status: ${resp?.status}`)
+async function sendProxyCheck(ips, apiKey, sender, returnObject) {
+    try {
+        const resp = await fetch(`http://proxycheck.io/v3/${ips}?key=${apiKey}`);
+        if (resp?.status !== 200) throw new Error(`Requesting Proxycheck data failed | API KEY: ${apiKey.substring(0, 10)}... | Status: ${resp?.status}`)
 
-//         const data = await resp.json();
+        const data = await resp.json();
 
-//         returnObject.status = "OK";
-//         returnObject.value = data;
-//         return chrome.tabs.sendMessage(sender.tab.id, returnObject);
-//     } catch (error) {
-//         console.error(error);
-//         returnObject.status = "ERROR";
-//         returnObject.value = error;
-//         return chrome.tabs.sendMessage(sender.tab.id, returnObject);
-//     }
-// }
+        returnObject.status = "OK";
+        returnObject.value = data;
+        return chrome.tabs.sendMessage(sender.tab.id, returnObject);
+    } catch (error) {
+        console.error(error);
+        returnObject.status = "ERROR";
+        returnObject.value = error;
+        return chrome.tabs.sendMessage(sender.tab.id, returnObject);
+    }
+}
 // async function sendAvatarsFromRustApi(steamId, apiKey, sender, returnObject) {
 //     try {
 //         const resp = await fetch(`https://rust-api.flqyd.dev/getAvatars/${steamId}?accessToken=${apiKey}`);
