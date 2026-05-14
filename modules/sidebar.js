@@ -209,14 +209,14 @@ export async function insertTeaminfoSidebarElement(team, connectedPlayersData, c
     const sidebarSlot = document.getElementById(`bme-sidebar-${spot}`);
     if (!sidebarSlot) return console.error(`BM-EXTRA: Sidebar element couldn't be located: ${`bme-sidebar-${spot}`}`)
 
-    const element = getTeamInfoElement(team.teamId, teamMembers, team.server, team.raw, settings);
+    const element = getTeamInfoElement(team.teamId, teamMembers, team.server, team.raw, settings, team.responseCode);
     if (!sidebarSlot.hasChildNodes()) sidebarSlot.append(element);
 }
-function getTeamInfoElement(teamId, teamMembers, server, raw, settings) {
+function getTeamInfoElement(teamId, teamMembers, server, raw, settings, responseCode) {
     const element = document.createElement("div");
     element.classList.add("bm-sidebar-teaminfo")
     const header = getTeamInfoHeader(teamId, teamMembers, server, raw);
-    const body = getTeamInfoBody(teamId, teamMembers, raw, settings)
+    const body = getTeamInfoBody(teamId, teamMembers, raw, settings, responseCode)
     element.append(header, body);
 
     return element;
@@ -235,7 +235,7 @@ function getTeamInfoHeader(teamId, teamMembers, serverName, raw) {
     title.innerText = `Current Team(${teamMembers.length}):`;
 
 
-    if (teamId.length < 6) {
+    if (teamId !== "error" && teamId.length < 6) {
         const id = document.createElement("h2")
         id.innerText = isNaN(Number(teamId)) ? teamId : `ID: ${teamId}`;
         wrapper.appendChild(id);
@@ -255,13 +255,16 @@ function getTeamInfoHeader(teamId, teamMembers, serverName, raw) {
 
     return header;
 }
-function getTeamInfoBody(teamId, teamMembers, raw, settings) {
+function getTeamInfoBody(teamId, teamMembers, raw, settings, responseCode) {
     const wrapper = document.createElement("div");
     wrapper.classList.add("bme-team-body")
     if (teamId === -1 || teamId === "error" || raw === "NO_SERVER") {
         const p = document.createElement("p");
         if (teamId === -1) p.innerText = raw;
-        if (teamId === "error") p.innerText = "Failed to request teaminfo!";
+        if (teamId === "error") {
+            const isHttpCode = !isNaN(Number(responseCode));
+            p.innerText = isHttpCode ? `Failed to request teaminfo! (HTTP ${responseCode})` : (responseCode || "Failed to request teaminfo!");
+        }
 
         wrapper.appendChild(p);
         return wrapper;

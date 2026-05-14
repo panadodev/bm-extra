@@ -59,7 +59,7 @@ function getSettingsMenu() {
     const div = document.createElement("div")
     div.id = "bme-settings-menu";
 
-    const menuPoints = ["Overview", "Identifier", "BM Information", "Sidebar", "Bans", "Keybinds",/*"Multi Org", "Evasion Checker",*/ "API Keys"];
+    const menuPoints = ["Overview", "Identifier", "BM Information", "Sidebar", "Bans", "Keybinds",/*"Multi Org", "Evasion Checker",*/ "API Keys", "My Servers"];
     for (let i = 0; i < menuPoints.length; i++) {
         const point = menuPoints[i];
 
@@ -98,8 +98,99 @@ function getSettingsBody(index) {
     if (index === 4) return getBanPageSettings();
     if (index === 5) return getHotKeySettings();
     if (index === 6) return getApiKeysSettings();
+    if (index === 7) return getMyServersSettings();
 }
 
+
+function getMyServersSettings() {
+    const element = document.createElement("div");
+
+    const title = document.createElement("h1");
+    title.innerText = "My Servers";
+    element.appendChild(title);
+
+    const description = document.createElement("p");
+    description.innerText = "Select which of your BattleMetrics servers to count hours on the BM Info panel. Use the Refresh button to load servers from your API key.";
+    element.appendChild(description);
+
+    const refreshButton = document.createElement("button");
+    refreshButton.innerText = "Refresh";
+    element.appendChild(refreshButton);
+
+    const statusEl = document.createElement("p");
+    statusEl.id = "bme-my-servers-status";
+    element.appendChild(statusEl);
+
+    const listEl = document.createElement("div");
+    listEl.id = "bme-my-servers-list";
+    element.appendChild(listEl);
+
+    const savedServers = JSON.parse(localStorage.getItem("BME_MY_SERVERS")) || [];
+    renderMyServerList(savedServers, listEl);
+
+    refreshButton.addEventListener("click", async () => {
+        refreshButton.disabled = true;
+        statusEl.innerText = "Fetching servers...";
+        try {
+            localStorage.removeItem("BME_MY_SERVER_CACHE");
+            const servers = await getMyServers(false);
+            if (!servers || servers.length === 0) {
+                statusEl.innerText = "No servers found. Make sure your BattleMetrics API key is set.";
+                refreshButton.disabled = false;
+                return;
+            }
+            const existing = JSON.parse(localStorage.getItem("BME_MY_SERVERS")) || [];
+            const merged = servers.map(server => {
+                const existingServer = existing.find(s => s.id === server.id);
+                return {
+                    id: server.id,
+                    name: server.name,
+                    enabled: existingServer ? existingServer.enabled : true,
+                };
+            });
+            localStorage.setItem("BME_MY_SERVERS", JSON.stringify(merged));
+            statusEl.innerText = `${merged.length} server(s) loaded.`;
+            renderMyServerList(merged, listEl);
+        } catch (error) {
+            statusEl.innerText = "Error fetching servers.";
+            console.error(error);
+        }
+        refreshButton.disabled = false;
+    });
+
+    return element;
+}
+function renderMyServerList(servers, container) {
+    container.innerHTML = "";
+    if (servers.length === 0) {
+        const p = document.createElement("p");
+        p.innerText = "No servers loaded yet. Click Refresh to fetch your servers.";
+        container.appendChild(p);
+        return;
+    }
+    servers.forEach(server => {
+        const item = document.createElement("div");
+        item.classList.add("bme-my-server-item");
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.id = `bme-server-chk-${server.id}`;
+        checkbox.checked = server.enabled;
+        checkbox.addEventListener("change", () => {
+            const saved = JSON.parse(localStorage.getItem("BME_MY_SERVERS")) || [];
+            const s = saved.find(s => s.id === server.id);
+            if (s) s.enabled = checkbox.checked;
+            localStorage.setItem("BME_MY_SERVERS", JSON.stringify(saved));
+        });
+
+        const label = document.createElement("label");
+        label.htmlFor = `bme-server-chk-${server.id}`;
+        label.innerText = server.name || server.id;
+
+        item.append(checkbox, label);
+        container.appendChild(item);
+    });
+}
 
 function getOverviewSettings() {
     const element = document.createElement("div");
@@ -165,12 +256,22 @@ function getOverviewSettings() {
         "Hides the player's IP address on the profile overview page.",
         null, settingsBucket, "hideIp", settings.hideIp
     )
+    const checkForUpdates = getSettingsElement(
+        "toggle", "Check for updates",
+        "Checks GitHub for a newer version of bm-extra and shows a badge next to the settings button when an update is available.",
+        null, settingsBucket, "checkForUpdates", settings.checkForUpdates
+    )
+    const showRateLimit = getSettingsElement(
+        "toggle", "Show rate limit bar",
+        "Shows a bar in the player nav indicating how many BattleMetrics API requests are remaining.",
+        null, settingsBucket, "showRateLimit", settings.showRateLimit
+    )
     const resetButton = getResetButton("bm-overview");
 
     element.append(
         showAvatar, showAlert, showBmInfo, removeSteamInfo, showServer,
         advancedBans, closeAdminLog, swapBattleEyeGuid,
-        maxNamesOnProfile, maxIpsOnProfile, hideIp,
+        maxNamesOnProfile, maxIpsOnProfile, hideIp, checkForUpdates, showRateLimit,
 
         resetButton
     );
@@ -263,11 +364,18 @@ function getIdentifierSettings() {
     )
     avatarsSegment.append(zoomableAvatars)
 
+    const checkSimilarNames = getSettingsElement(
+        "toggle", "Check Similar Names",
+        "Adds a CHECK button next to each player that shares a non-VPN IP. Clicking it fetches both players' names and shows the closest match with a similarity percentage.",
+        null, settingsBucket, "checkSimilarNames", settings.checkSimilarNames
+    )
+
     const resetButton = getResetButton("bm-identifier")
     element.append(
         showAvatarToggle, swapBattleEyeGuid, showIspAsnData,
         showExtraInfoSegment, highlightVpn, vpnSegment,
         displayAvatars, avatarsSegment,
+        checkSimilarNames,
 
         resetButton,
     )
@@ -296,6 +404,7 @@ function getBmInfoSettings() {
     element.appendChild(getColorSettingsRow(settings, "cheatReportsColors", "BattleMetrics Cheat Report Colors:", ""))
     element.appendChild(getColorSettingsRow(settings, "bmRustHoursColors", "BattleMetrics Hours Colors:", ""))
     element.appendChild(getColorSettingsRow(settings, "aimTrainColors", "BattleMetrics Aim Train Hours Colors:", ""))
+    element.appendChild(getColorSettingsRow(settings, "yourServersHoursColors", "Your Servers Hours Colors:", ""))
     element.appendChild(getBarrierSettingsRow(settings, "killBarrier", "Recent Kills Barrier (milliseconds):", ""))
     element.appendChild(getColorSettingsRow(settings, "killColors", "BattleMetrics Kill Count Colors:", ""))
     element.appendChild(getBarrierSettingsRow(settings, "deathBarrier", "Recent Deaths Barrier (milliseconds):", ""))
@@ -1183,7 +1292,7 @@ function getApiKeysSettings() {
     teaminfoSegment.classList.add("bme-settings-segment");
     const teaminfoApiUrlElement = getApiKeyDiv("Teaminfo API URL:", "BME_TEAMINFO_API_URL", "teaminfo-api", {
         segment: teaminfoSegment,
-        detail: "URL endpoint for teaminfo API (e.g., https://api.panado.dev/get-teaminfo)"
+        detail: "URL endpoint for teaminfo API (e.g., https://api.panado.dev/get-teaminfo/)"
     });
 
     const teaminfoApiTokenElement = getApiKeyDiv("Teaminfo API Token:", "BME_TEAMINFO_API_TOKEN", "teaminfo-token", {
@@ -1725,6 +1834,8 @@ function checkOverviewSettings() {
         if (typeof (settings.maxNames) !== "number") throw new Error("Settings error");
         if (typeof (settings.maxIps) !== "number") throw new Error("Settings error");
         if (typeof (settings.hideIp) !== "boolean") throw new Error("Settings error");
+        if (typeof (settings.checkForUpdates) !== "boolean") throw new Error("Settings error");
+        if (typeof (settings.showRateLimit) !== "boolean") throw new Error("Settings error");
     } catch (error) {
         const defaultSettings = getDefaultOverviewSettings();
         localStorage.setItem("BME_OVERVIEW_SETTINGS", JSON.stringify(defaultSettings));
@@ -1743,6 +1854,8 @@ function getDefaultOverviewSettings() {
     settings.maxNames = -1;
     settings.maxIps = -1;
     settings.hideIp = false;
+    settings.checkForUpdates = true;
+    settings.showRateLimit = true;
     return settings;
 }
 function checkIdentifierSettings() {
@@ -1762,6 +1875,7 @@ function checkIdentifierSettings() {
         if (typeof (settings.vpnAbove) !== "number") throw new Error("Settings error");
         if (typeof (settings.vpnBgColor) !== "string") throw new Error("Settings error");
         if (typeof (settings.vpnOpacity) !== "number") throw new Error("Settings error");
+        if (typeof (settings.checkSimilarNames) !== "boolean") throw new Error("Settings error");
 
     } catch (error) {
         const defaultSettings = getDefaultIdentifierSettings();
@@ -1783,6 +1897,7 @@ function getDefaultIdentifierSettings() {
     settings.vpnAbove = -1;
     settings.vpnBgColor = "#150f0f";
     settings.vpnOpacity = 0.6;
+    settings.checkSimilarNames = true;
     return settings;
 }
 function checkBmInfoSettings() {
@@ -1812,6 +1927,12 @@ function checkBmInfoSettings() {
         const defaultSettings = getDefaultBmInfoSettings();
         localStorage.setItem("BME_BM_INFO_SETTINGS", JSON.stringify(defaultSettings));
     }
+    // Migrate: add new keys without wiping existing settings
+    const _bmInfoMigrate = JSON.parse(localStorage.getItem("BME_BM_INFO_SETTINGS"));
+    if (_bmInfoMigrate && !_bmInfoMigrate.yourServersHoursColors) {
+        _bmInfoMigrate.yourServersHoursColors = [150, 750, 100000, false];
+        localStorage.setItem("BME_BM_INFO_SETTINGS", JSON.stringify(_bmInfoMigrate));
+    }
 }
 function getDefaultBmInfoSettings() {
     const settings = {};
@@ -1834,6 +1955,7 @@ function getDefaultBmInfoSettings() {
     settings.deathColors = [-1, -1, -1, false];
     settings.kdBarrier = 2 * ONE_DAY;
     settings.kdColors = [3, -1, -1, false];
+    settings.yourServersHoursColors = [150, 750, 100000, false];
 
     return settings;
 }

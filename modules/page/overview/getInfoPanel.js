@@ -9,12 +9,8 @@ export function getInfoPanel(bmSteamData, bmData, rustPremium, bmId) {
         const body = document.getElementsByClassName("bme-section-body")[0];
         const arrow = document.getElementById("bme-info-panel-arrow");
 
-        arrow.classList.toggle("closed")
-        if (arrow.classList.contains("closed")) {
-            body.style.height = "0px";
-        } else {
-            body.style.height = "280px";
-        }
+        arrow.classList.toggle("closed");
+        body.classList.toggle("bme-panel-closed");
     })
     element.appendChild(header);
 
@@ -59,11 +55,13 @@ function getSteamInfoPanel(steam, rustPremium) {
     items.push(...getSetupStateElements(steam));
     items.push(...getLimitedAccountElements(steam));
     items.push(...getPremiumStateElement(rustPremium));
+    items.push(createSeparator());
     items.push(...getGameBanCountElements(steam));
     items.push(...getVacBanCountElements(steam));
     items.push(...getDaysSinceElements(steam));
 
     const isHistoric = steam?.gamesLastChecked ? Date.now() - steam.gamesLastChecked > 7 * ONE_DAY : null;
+    items.push(createSeparator());
     items.push(...getSteamRustHoursElements(steam, settings.steamRustHoursColors, isHistoric));
     items.push(...getSteamCombinedHoursElements(steam, settings.steamCombinedHoursColors, isHistoric));
     items.push(...getSteamGameCountElements(steam, settings.steamGameCountColors, isHistoric));
@@ -253,33 +251,50 @@ function getBmInfoPanel(bm, bmId) {
     const items = [];
     items.push(...getAccountAgeElements(bm, settings.bmAccountAgeColors))
     items.push(...getBmAccountStatus(bm))
+    items.push(createSeparator());
     items.push(...getKillCountElements(bm, settings.killColors, settings.killBarrier));
     items.push(...getDeathElements(bm, settings.deathColors, settings.deathBarrier));
     items.push(...getKdElements(bm, settings.kdColors, settings.kdBarrier));
+    items.push(createSeparator());
     items.push(...getReportElements(bm, settings.allReportsColor, settings.allReportsBarrier))
     items.push(...getCheatReportElements(bm, settings.cheatReportsColors, settings.cheatReportsBarrier))
+    items.push(createSeparator());
     items.push(...getServerCountElements(bm, settings.serverCountColors))
     items.push(...getBmRustHoursElements(bm, settings.bmRustHoursColors))
+    items.push(...getYourServersHoursElements(bm, settings.yourServersHoursColors))
     items.push(...getAimTrainingElements(bm, settings.aimTrainColors));
+    items.push(createSeparator());
 
     const bmAltTitle = createHtmlElement("dt", "BM Banned Alts:");
     const bmAltValue = createHtmlElement("dd", "");
     const bmAltButton = createHtmlElement("a", "Click to check");
     bmAltButton.style.cursor = "pointer";
     bmAltValue.appendChild(bmAltButton);
-    bmAltButton.onclick = () => {
+    bmAltButton.onclick = async () => {
         const BMToken = localStorage.getItem("BME_BATTLEMETRICS_API_KEY");
-        chrome.runtime.sendMessage({ type: "GetBMBannedAlts", BMID: bmId, BMToken });
-        bmAltValue.innerText = "Loading...";
-        function bmAltHandler(message) {
-            if (message.type !== "GetBMBannedAlts") return;
-            chrome.runtime.onMessage.removeListener(bmAltHandler);
-            renderAltCheckResults(bmAltValue, message.response);
-        }
-        chrome.runtime.onMessage.addListener(bmAltHandler);
+        if (!BMToken) { bmAltValue.innerText = "No API key"; return; }
+        try {
+            const results = await checkAltsWithProgress("BME_BM_ALTS", bmId, BMToken, bmAltValue);
+            renderAltCheckResults(bmAltValue, results);
+        } catch { bmAltValue.innerText = "Error"; }
     };
-
     items.push(bmAltTitle, bmAltValue);
+
+    const eacAltTitle = createHtmlElement("dt", "EAC Banned Alts:");
+    const eacAltValue = createHtmlElement("dd", "");
+    const eacAltButton = createHtmlElement("a", "Click to check");
+    eacAltButton.style.cursor = "pointer";
+    eacAltValue.appendChild(eacAltButton);
+    eacAltButton.onclick = async () => {
+        const BMToken = localStorage.getItem("BME_BATTLEMETRICS_API_KEY");
+        if (!BMToken) { eacAltValue.innerText = "No API key"; return; }
+        try {
+            const results = await checkAltsWithProgress("BME_EAC_ALTS", bmId, BMToken, eacAltValue);
+            renderAltCheckResults(eacAltValue, results);
+        } catch { eacAltValue.innerText = "Error"; }
+    };
+    items.push(eacAltTitle, eacAltValue);
+
     for (const item of items) list.appendChild(item);
 
     return element;
@@ -338,6 +353,16 @@ function getCheatReportElements(bm, settings, recent) {
     }
     let currentClass = getDescendingClassString(settings, [reportCount, recentReportCount], settings[3])
     const value = createHtmlElement("dd", valueString, currentClass ? [currentClass] : []);
+    return [title, value];
+}
+function getYourServersHoursElements(bm, settings) {
+    const myServers = JSON.parse(localStorage.getItem("BME_MY_SERVERS")) || [];
+    if (!myServers.some(s => s.enabled)) return [];
+
+    const title = createHtmlElement("dt", "Your Servers:");
+    const colorSettings = settings || [-1, -1, -1, false];
+    let currentClass = getAscendingClassString(colorSettings, [bm.yourServersPlaytime], colorSettings[3]);
+    const value = createHtmlElement("dd", `${bm.yourServersPlaytime} hours`, currentClass ? [currentClass] : []);
     return [title, value];
 }
 function getBmRustHoursElements(bm, settings) {
@@ -431,6 +456,14 @@ function createHtmlElement(node, innerText, classList = []) {
     return element;
 }
 
+function createSeparator() {
+    const sep = document.createElement("div");
+    sep.classList.add("bme-dl-separator");
+    return sep;
+}
+
+
+
 
 
 const ONE_SECOND = 1000;
@@ -443,6 +476,56 @@ function getBmInfoTimeString(timestamp) {
     if (timestamp > ONE_MINUTE) return `${Math.floor(timestamp / ONE_MINUTE)} minutes`;
     if (timestamp > ONE_SECOND) return `${Math.floor(timestamp / ONE_SECOND)} seconds`
     return NaN;
+}
+
+function checkAltsWithProgress(type, bmId, BMToken, valueEl) {
+    const requestId = Math.floor(Math.random() * 1000000);
+    const fullType = `${type}_${requestId}`;
+
+    valueEl.innerHTML = "";
+    const track = document.createElement("div");
+    track.classList.add("bme-progress-track");
+    const bar = document.createElement("div");
+    bar.classList.add("bme-progress-bar");
+    track.appendChild(bar);
+    const label = document.createElement("span");
+    label.classList.add("bme-progress-label");
+    label.innerText = "0 / ?";
+    valueEl.append(track, label);
+
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            chrome.runtime.onMessage.removeListener(handler);
+            reject(new Error("TIMEOUT"));
+        }, 90000);
+
+        function handler(response) {
+            if (response?.type === `${fullType}_PROGRESS`) {
+                bar.style.width = `${(response.current / response.total) * 100}%`;
+                label.innerText = `${response.current} / ${response.total}`;
+                if (response.rateLimitRemaining != null) {
+                    document.dispatchEvent(new CustomEvent("bme:ratelimit", {
+                        detail: { remaining: response.rateLimitRemaining, max: response.rateLimitMax ?? null }
+                    }));
+                }
+                return;
+            }
+            if (response?.type === `${fullType}_RESOLVED`) {
+                clearTimeout(timer);
+                chrome.runtime.onMessage.removeListener(handler);
+                if (response.rateLimitRemaining != null) {
+                    document.dispatchEvent(new CustomEvent("bme:ratelimit", {
+                        detail: { remaining: response.rateLimitRemaining, max: response.rateLimitMax ?? null }
+                    }));
+                }
+                if (response.status === "ERROR") reject(new Error(response.message || "ERROR"));
+                else resolve(response.value);
+            }
+        }
+
+        chrome.runtime.onMessage.addListener(handler);
+        chrome.runtime.sendMessage({ type: fullType, subject: bmId, apiKey: BMToken });
+    });
 }
 
 function renderAltCheckResults(element, results) {

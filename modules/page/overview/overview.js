@@ -1,5 +1,30 @@
-import { getElementWhenAppears, getSteamIdObject, getTimeSpan, shouldAbort } from "../../misc.js";
+import { getAuthToken, getElementWhenAppears, getSteamIdObject, getTimeSpan, shouldAbort, talkToBackgroundScript } from "../../misc.js";
 import { getInfoPanel } from "./getInfoPanel.js";
+
+let _lastRateLimit = null;
+function _applyRateLimit(remaining, max) {
+    const fill = document.getElementById("bme-rate-limit-fill");
+    const text = document.querySelector("#bme-rate-limit-bar > span");
+    if (!fill || !text) return;
+    if (max == null) return;
+
+    const remainingPct = (remaining / max) * 100;
+    fill.style.width = `${remainingPct}%`;
+    text.textContent = `${remaining}`;
+    console.log(`[BME] Rate limit: ${remaining} / ${max} requests left`);
+
+    fill.className = "";
+    if (remainingPct >= 50) fill.classList.add("bme-rate-fill-ok");
+    else if (remainingPct >= 20) fill.classList.add("bme-rate-fill-warn");
+    else fill.classList.add("bme-rate-fill-low");
+}
+document.addEventListener("bme:ratelimit", (e) => {
+    _lastRateLimit = {
+        remaining: e.detail.remaining,
+        max: e.detail.max ?? _lastRateLimit?.max ?? null,
+    };
+    _applyRateLimit(_lastRateLimit.remaining, _lastRateLimit.max);
+});
 
 export async function displayServerActivity(bmId, bmProfile) {
     bmProfile = await bmProfile;
@@ -102,6 +127,42 @@ export async function displayInfoPanel(bmId, bmProfile, steamData, bmActivity, r
     if (shouldAbort(bmId, "bme-info-panel")) return;
     identifierDiv.insertAdjacentElement("afterend", infoPanel)
 }
+export async function setupRateLimitBadge() {
+    if (document.getElementById("bme-rate-limit-li")) return;
+
+    const container = await getElementWhenAppears("container", true);
+    const navUl = container?.children[1] ?? null;
+    if (!navUl) return;
+
+    const li = document.createElement("li");
+    li.id = "bme-rate-limit-li";
+
+    const bar = document.createElement("div");
+    bar.id = "bme-rate-limit-bar";
+
+    const fill = document.createElement("div");
+    fill.id = "bme-rate-limit-fill";
+
+    const text = document.createElement("span");
+    text.textContent = "Limit";
+
+    bar.append(fill, text);
+    li.appendChild(bar);
+
+    const spacer = [...navUl.children].find(c => c.children.length === 0) ?? null;
+    navUl.insertBefore(li, spacer);
+
+    if (_lastRateLimit?.max != null) {
+        _applyRateLimit(_lastRateLimit.remaining, _lastRateLimit.max);
+    } else {
+        // Nothing received yet — ping via background script (content scripts cannot read rate-limit headers due to CORS)
+        const bmId = new URL(location.href).pathname.split("/").filter(Boolean)[2];
+        const token = localStorage.getItem("BME_BATTLEMETRICS_API_KEY") || getAuthToken();
+        if (bmId && token) {
+            talkToBackgroundScript("BME_BM_PING", bmId, token).catch(() => {});
+        }
+    }
+}
 function getSteamData(steamIdObject, steamData) {
     if (!steamIdObject) return null;
     const returnData = {}
@@ -153,15 +214,22 @@ function getBmData(bmId, bmData, bmActivity) {
 
     returnData.combinedPlaytime = 0;
     returnData.aimTrainPlaytime = 0;
+    returnData.yourServersPlaytime = 0;
+
+    const myServersSelected = JSON.parse(localStorage.getItem("BME_MY_SERVERS")) || [];
 
     servers.forEach(server => {
         const timePlayed = server.meta.timePlayed;
         returnData.combinedPlaytime += timePlayed;
         if (isAimTrainingServer(server))
             returnData.aimTrainPlaytime += timePlayed;
+        const selectedServer = myServersSelected.find(s => s.id === server.id);
+        if (selectedServer?.enabled)
+            returnData.yourServersPlaytime += timePlayed;
     })
     returnData.combinedPlaytime = Math.floor(returnData.combinedPlaytime / 60 / 60);
     returnData.aimTrainPlaytime = Math.floor(returnData.aimTrainPlaytime / 60 / 60);
+    returnData.yourServersPlaytime = Math.floor(returnData.yourServersPlaytime / 60 / 60);
 
     returnData.allReports = [];
     returnData.cheatReports = [];
@@ -260,7 +328,7 @@ export async function advancedBans(bmId, banDataP) {
 
     let banSection = null;
     for (const section of sections) {
-        if (section.firstChild.innerText.trim() !== "Current & Past bans") continue;
+        if (section.firstChild?.innerText?.trim() !== "Current & Past bans") continue;
         banSection = section;
         break;
     }
@@ -272,8 +340,8 @@ export async function advancedBans(bmId, banDataP) {
     const urlId = location.href.split("/")[5];
     if (urlId !== bmId) return true; //Page changed | Abort
     for (const banElement of banList) {
-        const banId = banElement.firstChild.href.split("/")[6];
-        const banSpan = banElement.firstChild.firstChild;
+        const banId = banElement.firstChild?.href?.split("/")[6];
+        const banSpan = banElement.firstChild?.firstChild;
 
         const banItem = getBanItem(banData, banId);
         if (!banItem || !banSpan) continue;

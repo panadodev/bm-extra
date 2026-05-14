@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "bm-extra",
-    "version": "1.2.15",
+    "version": "2.2.16",
     "description": "BattleMetrics Extension that aims to enhance your experience with quality of life features.",
     "author": "FlQyD | panadodev",
     "content_scripts": [
@@ -41,7 +41,8 @@
         "*://api.steampowered.com/*",
         "*://api.panado.dev/get-teaminfo/*",
         "*://rust-api.facepunch.com/*",
-        "*://proxycheck.io/*"
+        "*://proxycheck.io/*",
+        "*://api.github.com/*"
     ],
     "permissions": [
         "downloads"

@@ -294,6 +294,12 @@ export function talkToBackgroundScript(type, subject, apiKey) {
             clearTimeout(timer);
             chrome.runtime.onMessage.removeListener(handler);
 
+            if (response.rateLimitRemaining != null) {
+                document.dispatchEvent(new CustomEvent("bme:ratelimit", {
+                    detail: { remaining: response.rateLimitRemaining, max: response.rateLimitMax ?? null }
+                }));
+            }
+
             if (response.status === "ERROR") reject(new Error(response.message || "ERROR"));
             else resolve(response.value);
         }

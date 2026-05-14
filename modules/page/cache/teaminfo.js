@@ -10,11 +10,18 @@ class Atlas {
     }
 
     async getTeamInfo(steamId, serverId, token) {
-        const data = await talkToBackgroundScript("BME_ATLAS_TEAMINFO", `${steamId}-${serverId}`, token);
+        let data;
+        try {
+            data = await talkToBackgroundScript("BME_ATLAS_TEAMINFO", `${steamId}-${serverId}`, token);
+        } catch (e) {
+            console.error(`Failed to request teaminfo | Error: ${e.message}`);
+            return `ERROR:${e.message}`;
+        }
+
         const result = data?.data?.attributes?.result[0]?.children[1]?.children[0]?.children[0]?.reference.result;
         if (!result) {
-            console.error(`Failed to request teaminfo | Status: ${resp.status} | Result: ${result}`);
-            return "error";
+            console.error(`Failed to request teaminfo | Result: ${result}`);
+            return "ERROR:NO_RESULT";
         }
 
         return result;
@@ -44,7 +51,7 @@ class BestRust {
 
         if (resp.status !== 200) {
             console.error(`Failed to request teaminfo | Status: ${resp.status}`);
-            return "error";
+            return `ERROR:${resp.status}`;
         }
 
         const data = await resp.json();
@@ -52,7 +59,7 @@ class BestRust {
         const result = data.data?.attributes?.result[0]?.children[1]?.children[0]?.children[0]?.reference.result
         if (!result) {
             console.error(`Failed to request teaminfo | Status: ${resp.status} | Result: ${result}`);
-            return "error";
+            return "ERROR:NO_RESULT";
         }
 
         return result;
@@ -117,14 +124,14 @@ class BattleZone {
 
         if (resp.status !== 200) {
             console.error(`Failed to request teaminfo | Status: ${resp.status}`);
-            return "error";
+            return `ERROR:${resp.status}`;
         }
 
         const data = await resp.json();
         const result = data.data?.attributes?.result
         if (!result) {
             console.error(`Failed to request teaminfo | Status: ${resp.status} | Result: ${result}`);
-            return "error";
+            return "ERROR:NO_RESULT";
         }
 
         return result;
@@ -134,6 +141,25 @@ class BattleZone {
 class Willjums {
     id = "30126";
 
+    /*
+    {
+        teamId: string | number,  // Team ID (or -1/"error" for error states)
+        members: [
+            {
+            steamId: string,           // Required - Steam ID of team member
+            online: boolean,           // Optional - Whether player is online
+            lastSeen: number,          // Optional - Unix timestamp in seconds
+            firstSeen: number,         // Optional - Unix timestamp in seconds
+            since: number,             // Optional - Unix timestamp in seconds
+            leader: boolean,           // Optional - Whether player is team leader
+            origin: string,            // Optional - "origin" or "friend"
+            }
+        ],
+        server: string,   // Server name (displayed in header)
+        raw: string       // Raw teaminfo data (for copy button functionality)
+        }
+    */
+
     static {
         organizations.push(new this());
     }
@@ -142,20 +168,27 @@ class Willjums {
         const apiUrl = localStorage.getItem("BME_TEAMINFO_API_URL");
         if (!apiUrl) {
             console.error("Teaminfo API URL is not configured");
-            return "error";
+            return "ERROR:NO_API_URL";
         }
 
         const apiToken = localStorage.getItem("BME_TEAMINFO_API_TOKEN");
         if (!apiToken) {
             console.error("Teaminfo API Token is not configured");
-            return "error";
+            return "ERROR:NO_API_TOKEN";
         }
 
-        const data = await talkToBackgroundScript("BME_WILLJUMS_TEAMINFO", `${steamId}-${serverId}-${apiUrl}`, apiToken);
+        let data;
+        try {
+            data = await talkToBackgroundScript("BME_WILLJUMS_TEAMINFO", `${steamId}-${serverId}-${apiUrl}`, apiToken);
+        } catch (e) {
+            console.error(`Failed to request teaminfo | Error: ${e.message}`);
+            return `ERROR:${e.message}`;
+        }
+
         const result = data?.raw;
         if (!result) {
             console.error(`Failed to request teaminfo | Result: ${result}`);
-            return "error";
+            return "ERROR:NO_RESULT";
         }
 
         return result;

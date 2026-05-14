@@ -2,9 +2,9 @@ import { removeSidebars } from "../misc.js";
 import { cache, setupCacheFor } from "../page/cache/cache.js";
 import { checkAndSetupSettingsIfMissing } from "../settings.js";
 import { insertBanPresets, insertFriendComparator, insertFriendsSidebarElement, insertHistoricFriendsSidebarElement, insertPublicBansSidebarElement, insertSidebars, insertTeaminfoSidebarElement } from "../sidebar.js";
-import { convertTimestampsToDay, displayAvatar, displaySettingsButton, redactIdentifiers, selectLastServer, swapBattleEyeGuid } from "./display.js";
-import { displayAvatars, highlightVpnIdentifiers, showExtraDataOnIps } from "./identifier/identifier.js";
-import { advancedBans, closeAdminLog, displayAlertLink, displayInfoPanel, displayServerActivity, hideIpOnProfile, limitItem, removeSteamInformation } from "./overview/overview.js";
+import { checkForUpdates, convertTimestampsToDay, displayAvatar, displaySettingsButton, redactIdentifiers, selectLastServer, swapBattleEyeGuid } from "./display.js";
+import { addSharedIpNameCheck, displayAvatars, highlightVpnIdentifiers, showExtraDataOnIps } from "./identifier/identifier.js";
+import { advancedBans, closeAdminLog, displayAlertLink, displayInfoPanel, displayServerActivity, hideIpOnProfile, limitItem, removeSteamInformation, setupRateLimitBadge } from "./overview/overview.js";
 
 let settingsChecked = false;
 export function router(url) {
@@ -24,6 +24,8 @@ export function router(url) {
         if (isNaN(Number(bmId))) return;
 
         setupCacheFor(bmId, "RCON_PROFILE");
+        const overviewSettings = JSON.parse(localStorage.getItem("BME_OVERVIEW_SETTINGS"));
+        if (overviewSettings?.showRateLimit) setupRateLimitBadge();
 
         if (path[3] === undefined) return onOverviewPage(bmId);
         if (path[3] === "identifiers") return onIdentifierPage(bmId);
@@ -51,6 +53,7 @@ async function onOverviewPage(bmId) {
     sidebar(bmId, playerCache, sidebarSettings)
 
     displaySettingsButton();
+    if (settings.checkForUpdates) checkForUpdates();
     if (settings.showAlert) displayAlertLink(bmId);
     if (settings.showServer) displayServerActivity(bmId, playerCache.bmProfile);
     if (settings.showInfoPanel) displayInfoPanel(bmId, playerCache.bmProfile, playerCache.steamData, playerCache.bmActivity, playerCache.rustPremium);
@@ -76,6 +79,7 @@ async function onIdentifierPage(bmId) {
     if (settings.highlightVpn) highlightVpnIdentifiers(bmId, { label: settings.removeVpnLabel, threshold: settings.vpnAbove, background: settings.vpnBgColor, opacity: settings.vpnOpacity })
     if (settings.displayAvatars) displayAvatars(bmId, playerCache.identifiers.avatars, settings.zoomableAvatars)
     if (settings.swapBattleEyeGuid) swapBattleEyeGuid(bmId, playerCache.bmProfile);
+    if (settings.checkSimilarNames) addSharedIpNameCheck(bmId, playerCache.bmProfile);
 }
 async function onAddBanPage(bmId) {
     const settings = JSON.parse(localStorage.getItem("BME_BAN_PAGE_SETTINGS"))

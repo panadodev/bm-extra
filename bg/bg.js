@@ -1,3 +1,7 @@
+import { getBMBannedAltsBulk } from './battlemetrics/getBMBannedAltsBulk.js';
+import { getRelatedPlayers } from './battlemetrics/getRelatedPlayers.js';
+import { bmRateLimitMax, bmRateLimitRemaining, fetchWithRateLimit } from './other/fetchWithRateLimit.js';
+
 console.log("Service worker loaded!")
 
 /**
@@ -26,6 +30,9 @@ chrome.runtime.onMessage.addListener(async (req, sender) => {
     // if (req.type.startsWith("BME_PUBLIC_BANS")) return sendPublicBans(req.subject, req.apiKey, sender, returnObject);
     if (req.type.startsWith("BME_ATLAS_TEAMINFO")) return sendAtlasTeaminfo(req.subject, req.apiKey, sender, returnObject);
     if (req.type.startsWith("BME_WILLJUMS_TEAMINFO")) return sendWilljumsTeaminfo(req.subject, req.apiKey, sender, returnObject);
+    if (req.type.startsWith("BME_BM_ALTS")) return sendBmBannedAlts(req.subject, req.apiKey, sender, returnObject);
+    if (req.type.startsWith("BME_EAC_ALTS")) return sendEacBannedAlts(req.subject, req.apiKey, sender, returnObject);
+    if (req.type.startsWith("BME_BM_PING")) return sendBmPing(req.subject, req.apiKey, sender, returnObject);
 
 })
 
@@ -61,6 +68,7 @@ async function sendFriendlistFromSteam(steamId, apiKey, sender, returnObject) {
     } catch (error) {
         console.error(error);
         returnObject.status = "ERROR";
+        returnObject.message = error.message;
         returnObject.value = error;
         return chrome.tabs.sendMessage(sender.tab.id, returnObject);
     }
@@ -89,7 +97,7 @@ async function sendPremiumStatus(steamId, sender, returnObject) {
             headers: {
                 "Content-Type": "application/json"
             },
-            body: `{"SteamIds":[${steamId}]}`,
+            body: JSON.stringify({ SteamIds: [steamId] }),
         });
         if (resp?.status !== 200) throw new Error(`Requesting premium status failed | steamId: ${steamId} | Status: ${resp?.status}`)
 
@@ -102,13 +110,14 @@ async function sendPremiumStatus(steamId, sender, returnObject) {
     } catch (error) {
         console.error(error);
         returnObject.status = "ERROR";
+        returnObject.message = error.message;
         returnObject.value = error;
         return chrome.tabs.sendMessage(sender.tab.id, returnObject);
     }
 }
 async function sendProxyCheck(ips, apiKey, sender, returnObject) {
     try {
-        const resp = await fetch(`http://proxycheck.io/v3/${ips}?key=${apiKey}`);
+        const resp = await fetch(`https://proxycheck.io/v3/${ips}?key=${apiKey}`);
         if (resp?.status !== 200) throw new Error(`Requesting Proxycheck data failed | API KEY: ${apiKey.substring(0, 10)}... | Status: ${resp?.status}`)
 
         const data = await resp.json();
@@ -119,6 +128,7 @@ async function sendProxyCheck(ips, apiKey, sender, returnObject) {
     } catch (error) {
         console.error(error);
         returnObject.status = "ERROR";
+        returnObject.message = error.message;
         returnObject.value = error;
         return chrome.tabs.sendMessage(sender.tab.id, returnObject);
     }
@@ -146,6 +156,7 @@ async function sendSteamPlayerSummaries(steamIds, API_KEY, sender, returnObject)
     } catch (error) {
         console.error(error);
         returnObject.status = "ERROR";
+        returnObject.message = error.message;
         returnObject.value = error;
         return chrome.tabs.sendMessage(sender.tab.id, returnObject);
     }
@@ -157,7 +168,7 @@ async function sendSteamPlayerBanSummaries(steamIds, API_KEY, sender, returnObje
         if (resp?.status !== 200) throw new Error(`Requesting Steam Ban Summaries Failed | steamId: ${steamId} | API KEY: ${apiKey.substring(0, 10)}... | Status: ${resp?.status}`)
 
         const data = await resp.json();
-        returnObject.status === "OK";
+        returnObject.status = "OK";
         returnObject.value = data.players.map(item => {
             return {
                 steamId: item.SteamId,
@@ -171,6 +182,7 @@ async function sendSteamPlayerBanSummaries(steamIds, API_KEY, sender, returnObje
     } catch (error) {
         console.error(error);
         returnObject.status = "ERROR";
+        returnObject.message = error.message;
         returnObject.value = error;
         return chrome.tabs.sendMessage(sender.tab.id, returnObject);
     }
@@ -196,7 +208,7 @@ async function sendAtlasTeaminfo(values, apiKey, sender, returnObject) {
         const steamId = values.split("-")[0];
         const serverId = values.split("-")[1];
 
-        const resp = await fetch(`https://api.battlemetrics.com/servers/${serverId}/command`, {
+        const resp = await fetchWithRateLimit(`https://api.battlemetrics.com/servers/${serverId}/command`, {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${apiKey}`,
@@ -215,15 +227,21 @@ async function sendAtlasTeaminfo(values, apiKey, sender, returnObject) {
                 }
             })
         })
-        if (resp?.status !== 200) throw new Error(`Requesting Atlas teaminfo failed | steamId: ${steamId} | API KEY: ${apiKey.substring(0, 10)}... | Status: ${resp?.status}`)
+        if (resp?.status !== 200) {
+            console.error(`Requesting Atlas teaminfo failed | steamId: ${steamId} | API KEY: ${apiKey.substring(0, 10)}... | Status: ${resp?.status}`);
+            throw new Error(String(resp.status));
+        }
 
         const data = await resp.json();
         returnObject.status = "OK";
         returnObject.value = data;
+        returnObject.rateLimitRemaining = bmRateLimitRemaining;
+        returnObject.rateLimitMax = bmRateLimitMax;
         return chrome.tabs.sendMessage(sender.tab.id, returnObject);
     } catch (error) {
         console.error(error);
         returnObject.status = "ERROR";
+        returnObject.message = error.message;
         returnObject.value = error;
         return chrome.tabs.sendMessage(sender.tab.id, returnObject);
     }
@@ -243,7 +261,10 @@ async function sendWilljumsTeaminfo(values, apiKey, sender, returnObject) {
             }
         });
 
-        if (resp?.status !== 200) throw new Error(`Requesting Willjums teaminfo failed | steamId: ${steamId} | API KEY: ${apiKey.substring(0, 10)}... | Status: ${resp?.status}`);
+        if (resp?.status !== 200) {
+            console.error(`Requesting Willjums teaminfo failed | steamId: ${steamId} | API KEY: ${apiKey.substring(0, 10)}... | Status: ${resp?.status}`);
+            throw new Error(String(resp.status));
+        }
 
         const data = await resp.json();
         returnObject.status = "OK";
@@ -252,6 +273,23 @@ async function sendWilljumsTeaminfo(values, apiKey, sender, returnObject) {
     } catch (error) {
         console.error(error);
         returnObject.status = "ERROR";
+        returnObject.message = error.message;
+        returnObject.value = error;
+        return chrome.tabs.sendMessage(sender.tab.id, returnObject);
+    }
+}
+
+async function sendBmPing(bmId, apiKey, sender, returnObject) {
+    try {
+        await fetchWithRateLimit(`https://api.battlemetrics.com/players/${bmId}?access_token=${apiKey}`);
+        returnObject.status = "OK";
+        returnObject.value = null;
+        returnObject.rateLimitRemaining = bmRateLimitRemaining;
+        returnObject.rateLimitMax = bmRateLimitMax;
+        return chrome.tabs.sendMessage(sender.tab.id, returnObject);
+    } catch (error) {
+        returnObject.status = "ERROR";
+        returnObject.message = error.message;
         returnObject.value = error;
         return chrome.tabs.sendMessage(sender.tab.id, returnObject);
     }
@@ -269,55 +307,99 @@ chrome.runtime.onMessage.addListener(async (request, sender) => {
     }
 });
 
-async function getRelatedPlayers(BMToken, BMID) {
+async function sendBmBannedAlts(bmId, BMToken, sender, returnObject) {
     try {
-        const response = await fetch(`https://api.battlemetrics.com/players/${BMID}/relationships/related-identifiers?version=%5E0.1.0&access_token=${BMToken}`);
-        if (!response.ok) return undefined;
+        const relatedPlayers = await getRelatedPlayers(BMToken, bmId);
+        if (!relatedPlayers) throw new Error("Failed to fetch related players");
 
-        const data = await response.json();
-        const relatedIDs = {};
+        const total = relatedPlayers.length;
+        const progressType = returnObject.type.replace("_RESOLVED", "_PROGRESS");
+        const results = [];
 
-        for (const identifier of data.data) {
-            for (const relatedPlayer of identifier.relationships.relatedPlayers.data) {
-                if (relatedIDs[relatedPlayer.id] === undefined) {
-                    relatedIDs[relatedPlayer.id] = 1;
-                } else {
-                    relatedIDs[relatedPlayer.id]++;
-                }
+        for (let i = 0; i < relatedPlayers.length; i++) {
+            const [playerId, matchCount] = relatedPlayers[i];
+            try {
+                const resp = await fetchWithRateLimit(`https://api.battlemetrics.com/bans?version=%5E0.1.0&filter[player]=${playerId}&access_token=${BMToken}`);
+                if (!resp.ok) continue;
+
+                const data = await resp.json();
+                if (!data.data?.length) continue;
+
+                const playerResp = await fetchWithRateLimit(`https://api.battlemetrics.com/players/${playerId}?version=%5E0.1.0&access_token=${BMToken}`);
+                const playerData = playerResp.ok ? await playerResp.json() : null;
+
+                results.push({
+                    id: playerId,
+                    name: playerData?.data?.attributes?.name || playerId,
+                    matchCount,
+                    banCount: data.data.length,
+                });
+            } catch (error) {
+                if (error.message === "RATE_LIMIT") throw error;
+                console.error(error);
             }
+            chrome.tabs.sendMessage(sender.tab.id, { type: progressType, current: i + 1, total, rateLimitRemaining: bmRateLimitRemaining, rateLimitMax: bmRateLimitMax });
         }
 
-        const relatedPlayers = Object.entries(relatedIDs).sort((a, b) => b[1] - a[1]);
-        if (relatedPlayers.length > 12) relatedPlayers.length = 12;
-        return relatedPlayers;
+        returnObject.status = "OK";
+        returnObject.value = results;
+        returnObject.rateLimitRemaining = bmRateLimitRemaining;
+        returnObject.rateLimitMax = bmRateLimitMax;
+        return chrome.tabs.sendMessage(sender.tab.id, returnObject);
     } catch (error) {
         console.error(error);
-        return undefined;
+        returnObject.status = "ERROR";
+        returnObject.message = error.message;
+        returnObject.value = error;
+        return chrome.tabs.sendMessage(sender.tab.id, returnObject);
     }
 }
 
-async function getBMBannedAltsBulk(BMToken, relatedPlayers) {
-    const results = [];
-    for (const [playerId, matchCount] of relatedPlayers) {
-        try {
-            const resp = await fetch(`https://api.battlemetrics.com/bans?version=%5E0.1.0&filter[player]=${playerId}&access_token=${BMToken}`);
-            if (!resp.ok) continue;
+async function sendEacBannedAlts(bmId, BMToken, sender, returnObject) {
+    try {
+        const relatedPlayers = await getRelatedPlayers(BMToken, bmId);
+        if (!relatedPlayers) throw new Error("Failed to fetch related players");
 
-            const data = await resp.json();
-            if (!data.data?.length) continue;
+        const total = relatedPlayers.length;
+        const progressType = returnObject.type.replace("_RESOLVED", "_PROGRESS");
+        const bannedAlts = [];
 
-            const playerResp = await fetch(`https://api.battlemetrics.com/players/${playerId}?version=%5E0.1.0&access_token=${BMToken}`);
-            const playerData = playerResp.ok ? await playerResp.json() : null;
+        for (let i = 0; i < relatedPlayers.length; i++) {
+            const [playerId, sharedCount] = relatedPlayers[i];
+            try {
+                const resp = await fetchWithRateLimit(`https://api.battlemetrics.com/players/${playerId}?include=identifier&access_token=${BMToken}`);
+                if (!resp.ok) continue;
 
-            results.push({
-                id: playerId,
-                name: playerData?.data?.attributes?.name || playerId,
-                matchCount,
-                banCount: data.data.length,
-            });
-        } catch (error) {
-            console.error(error);
+                const data = await resp.json();
+                const steamIdentifier = data.included?.find(
+                    i => i.type === "identifier" && i.attributes.type === "steamID"
+                );
+
+                if (steamIdentifier?.attributes?.metadata?.rustBans?.count > 0) {
+                    bannedAlts.push({
+                        id: playerId,
+                        name: data.data?.attributes?.name || playerId,
+                        sharedCount,
+                        temp: steamIdentifier.attributes.metadata.rustBans.banned ? false : true,
+                    });
+                }
+            } catch (error) {
+                if (error.message === "RATE_LIMIT") throw error;
+                console.error(error);
+            }
+            chrome.tabs.sendMessage(sender.tab.id, { type: progressType, current: i + 1, total, rateLimitRemaining: bmRateLimitRemaining, rateLimitMax: bmRateLimitMax });
         }
+
+        returnObject.status = "OK";
+        returnObject.value = bannedAlts;
+        returnObject.rateLimitRemaining = bmRateLimitRemaining;
+        returnObject.rateLimitMax = bmRateLimitMax;
+        return chrome.tabs.sendMessage(sender.tab.id, returnObject);
+    } catch (error) {
+        console.error(error);
+        returnObject.status = "ERROR";
+        returnObject.message = error.message;
+        returnObject.value = error;
+        return chrome.tabs.sendMessage(sender.tab.id, returnObject);
     }
-    return results;
 }

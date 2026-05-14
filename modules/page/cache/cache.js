@@ -430,7 +430,7 @@ async function getCurrentTeam(bmProfile, authToken) {
         }
 
         //Something failed
-        if (!rawTeaminfo || rawTeaminfo === "error") return { teamId: "error", members: [], server: "", raw: "" }
+        if (!rawTeaminfo || rawTeaminfo.startsWith("ERROR:")) return { teamId: "error", members: [], server: "", raw: "", responseCode: rawTeaminfo?.slice(6) || "UNKNOWN" }
 
         //Not in a team / Not found on the server
         if (rawTeaminfo === "Player is not in a team" || rawTeaminfo === "Player not found") {
@@ -466,7 +466,8 @@ async function getCurrentTeam(bmProfile, authToken) {
             teamId: "error",
             raw: "error",
             server: "error",
-            members: []
+            members: [],
+            responseCode: error.message
         }
     }
 }

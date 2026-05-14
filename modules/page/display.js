@@ -4,14 +4,53 @@ import { displaySettings } from "../settings.js";
 export async function displaySettingsButton(bmId) {
     const rconElement = await getElementWhenAppears("RCONPlayerPage");
 
-    const button = document.createElement("img");
-    button.id = "bme-settings-button"
-    button.src = chrome.runtime.getURL('assets/img/settings.png');
+    const li = document.createElement("li");
+    li.id = "bme-settings-button";
 
-    button.addEventListener("click", displaySettings)
+    const a = document.createElement("a");
+    a.href = "";
+    a.className = "blue-button";
+    a.textContent = "BM Extra";
+    a.addEventListener("click", (e) => { e.preventDefault(); displaySettings(); });
+
+    li.appendChild(a);
 
     const testElement = document.getElementById("bme-settings-button");
-    if (!testElement) rconElement.before(button);
+    if (!testElement) rconElement.before(li);
+}
+
+let _updateChecked = false;
+export async function checkForUpdates() {
+    if (_updateChecked) return;
+    _updateChecked = true;
+
+    try {
+        const resp = await fetch("https://api.github.com/repos/panadodev/bm-extra/releases/latest");
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const latestVersion = data.tag_name?.replace(/^v/, "");
+        if (!latestVersion) return;
+
+        const currentVersion = chrome.runtime.getManifest().version;
+        console.log(`BM-EXTRA: current version: ${currentVersion} | latest release: ${latestVersion}`);
+        const toNum = v => v.split(".").reduce((acc, n, i) => acc + Number(n) * Math.pow(1000, 2 - i), 0);
+        if (toNum(latestVersion) <= toNum(currentVersion)) return;
+
+        const settingsBtn = await getElementWhenAppears("bme-settings-button");
+        if (!settingsBtn) return;
+
+        const badge = document.createElement("a");
+        badge.id = "bme-update-badge";
+        badge.href = "https://github.com/panadodev/bm-extra/releases/latest";
+        badge.target = "_blank";
+        badge.className = "green-button";
+        badge.textContent = "Update available";
+        badge.title = `New version: ${latestVersion} (current: ${currentVersion})`;
+
+        settingsBtn.appendChild(badge);
+    } catch (error) {
+        console.error(`BM-EXTRA: ${error}`);
+    }
 }
 
 export async function displayAvatar(bmId, bmProfile, bmSteamData) {

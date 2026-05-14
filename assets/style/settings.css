@@ -2,24 +2,8 @@
     position: relative;
     float: right;
     top: 20px;
-
-    width: 45px;
-    height: 45px;
-
-    border-radius: 5px;
-    transition: 200ms;
-    cursor: pointer;
-
-    -webkit-user-drag: none;
-    user-select: none;
-}
-
-#bme-settings-button:hover {
-    background: #ffffff30;
-}
-
-#bme-settings-button:active {
-    background: #ffffff60;
+    right: 20px;
+    list-style: none;
 }
 
 #bme-settings-background {
@@ -263,6 +247,41 @@
 
 .bme-title-row {
     gap: 30px;
+}
+
+#bme-my-servers-list {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.bme-my-server-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    background: #ffffff10;
+    border-radius: 4px;
+}
+
+.bme-my-server-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.bme-my-server-item label {
+    cursor: pointer;
+    font-size: 14px;
+    user-select: none;
+}
+
+#bme-my-servers-status {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #aaaaaa;
 }
 
 .bme-settings-req {

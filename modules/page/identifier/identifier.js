@@ -1,4 +1,4 @@
-import { getElementWhenAppears, getIdentifierType, getTimeSpan } from "../../misc.js";
+import { getAuthToken, getElementWhenAppears, getIdentifierType, getTimeSpan } from "../../misc.js";
 import { getProxyCheckIpInfo } from "../cache/cache.js";
 
 export async function showExtraDataOnIps(bmId, bmProfile, requestProxyCheck) {
@@ -261,6 +261,235 @@ export async function displayAvatars(bmId, avatars, zoomable) {
         nameElement.before(avatarElement);
     })
 }
+export async function addSharedIpNameCheck(bmId, bmProfile) {
+    bmProfile = await bmProfile;
+
+    const nonVpnIpIds = new Set(
+        bmProfile.included
+            .filter(item => {
+                if (item.type !== "identifier" || item.attributes?.type !== "ip") return false;
+                const conInfo = item.attributes?.metadata?.connectionInfo;
+                return !(conInfo?.datacenter || conInfo?.proxy || conInfo?.tor);
+            })
+            .map(item => item.id)
+    );
+
+    const currentPlayerNames = bmProfile.included
+        .filter(item => item.type === "identifier" && item.attributes?.type === "name")
+        .map(item => item.attributes.identifier)
+        .filter(Boolean);
+
+    const identifierWrapper = await getElementWhenAppears("css-11gv980", true);
+    const identifierTable = identifierWrapper?.lastChild?.children;
+    if (!identifierTable) return console.error("BM-EXTRA: identifierTable is missing!");
+
+    // Shared player links load asynchronously — wait for them
+    for (let i = 0; i < 50; i++) {
+        if (!document.body.contains(identifierTable[0])) return;
+        if (identifierWrapper.innerText.includes("Identifier shared with")) break;
+        await new Promise(r => setTimeout(r, 150 * (i / 10 + 1)));
+    }
+
+    // Find the IP section header row
+    const ipHeaderRow = Array.from(identifierTable).find(row =>
+        row.classList.contains("css-147tpna") &&
+        row.querySelector("th")?.innerText.trim() === "IP"
+    );
+    if (!ipHeaderRow) return;
+
+    // Add the COMPARE NAMES button into the IP header <th>
+    const ipTh = ipHeaderRow.querySelector("th");
+    const analyseBtn = document.createElement("button");
+    analyseBtn.classList.add("bme-button", "bme-name-check-btn");
+    analyseBtn.textContent = "COMPARE NAMES";
+    ipTh.appendChild(analyseBtn);
+
+    // Build the summary row that will appear directly under the IP header
+    const summaryRow = document.createElement("tr");
+    summaryRow.classList.add("bme-name-check-summary-row");
+    summaryRow.style.display = "none";
+
+    const summaryCell = document.createElement("td");
+    summaryCell.colSpan = 3;
+    summaryRow.appendChild(summaryCell);
+
+    const progressWrapper = document.createElement("div");
+    progressWrapper.classList.add("bme-name-check-progress-wrapper");
+
+    const progressTrack = document.createElement("div");
+    progressTrack.classList.add("bme-name-check-progress-track");
+    const progressFill = document.createElement("div");
+    progressFill.classList.add("bme-name-check-progress-fill");
+    progressTrack.appendChild(progressFill);
+
+    const progressLabel = document.createElement("div");
+    progressLabel.classList.add("bme-name-check-progress-label");
+
+    progressWrapper.append(progressTrack, progressLabel);
+    summaryCell.appendChild(progressWrapper);
+
+    const resultsEl = document.createElement("div");
+    resultsEl.classList.add("bme-name-check-results");
+    summaryCell.appendChild(resultsEl);
+
+    ipHeaderRow.after(summaryRow);
+
+    analyseBtn.addEventListener("click", async () => {
+        if (analyseBtn.classList.contains("bme-button-disabled")) return;
+        analyseBtn.classList.add("bme-button-disabled");
+
+        summaryRow.style.display = "";
+        progressWrapper.style.display = "";
+        progressFill.style.width = "0%";
+        progressLabel.textContent = "Collecting shared players...";
+        resultsEl.innerHTML = "";
+        resultsEl.style.display = "none";
+
+        // Collect non-VPN shared player IDs directly from the DOM links
+        const sharedPlayerIds = new Set();
+        for (const identifier of identifierTable) {
+            const { type, id } = getIdentifierType(identifier);
+            if (type !== "IP" || !id) continue;
+            if (!nonVpnIpIds.has(id)) continue;
+
+            const ol = identifier.children[0]?.querySelector("ol");
+            if (!ol) continue;
+
+            for (const li of ol.children) {
+                const link = li.querySelector("a");
+                if (!link) continue;
+                const sharedPlayerId = link.href.split("/").pop();
+                if (!sharedPlayerId || isNaN(Number(sharedPlayerId))) continue;
+                if (sharedPlayerId !== bmId) sharedPlayerIds.add(sharedPlayerId);
+            }
+        }
+
+        const playerIdsArr = [...sharedPlayerIds];
+        if (!playerIdsArr.length) {
+            progressWrapper.style.display = "none";
+            resultsEl.textContent = "No shared non-VPN/proxy players found.";
+            resultsEl.style.display = "block";
+            analyseBtn.classList.remove("bme-button-disabled");
+            return;
+        }
+
+        // Fetch names for each shared player and score similarity
+        const results = [];
+        for (let i = 0; i < playerIdsArr.length; i++) {
+            const pct = Math.round((i / playerIdsArr.length) * 100);
+            progressFill.style.width = `${pct}%`;
+            progressLabel.textContent = `${pct}% — Checking account ${i + 1} of ${playerIdsArr.length}`;
+
+            const sharedNames = await fetchPlayerNames(playerIdsArr[i]);
+            if (!sharedNames?.length) continue;
+
+            let bestScore = 0;
+            let bestCurrentName = null;
+            let bestSharedName = null;
+            for (const nameA of currentPlayerNames) {
+                for (const nameB of sharedNames) {
+                    const score = nameSimilarity(nameA, nameB);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestCurrentName = nameA;
+                        bestSharedName = nameB;
+                    }
+                }
+            }
+
+            if (bestCurrentName !== null) {
+                results.push({ playerId: playerIdsArr[i], score: bestScore, currentName: bestCurrentName, sharedName: bestSharedName });
+            }
+        }
+
+        progressFill.style.width = "100%";
+        progressLabel.textContent = "100% — Done.";
+        await new Promise(r => setTimeout(r, 400));
+
+        progressWrapper.style.display = "none";
+        resultsEl.innerHTML = "";
+        resultsEl.style.display = "block";
+
+        if (!results.length) {
+            resultsEl.textContent = "No name similarities found across shared IPs.";
+            analyseBtn.classList.remove("bme-button-disabled");
+            return;
+        }
+
+        results.sort((a, b) => b.score - a.score);
+        const top5 = results.slice(0, 5);
+
+        const title = document.createElement("div");
+        title.classList.add("bme-name-check-title");
+        title.textContent = "Top 5 — Most likely same person:";
+        resultsEl.appendChild(title);
+
+        for (const match of top5) {
+            const matchRow = document.createElement("div");
+            matchRow.classList.add("bme-name-check-match");
+
+            const scoreSpan = document.createElement("span");
+            scoreSpan.classList.add("bme-name-check-score");
+            const colorClass = match.score >= 80 ? "bme-red-text" : match.score >= 50 ? "bme-yellow-text" : "";
+            if (colorClass) scoreSpan.classList.add(colorClass);
+            scoreSpan.textContent = `${match.score}%`;
+
+            const link = document.createElement("a");
+            link.href = `https://www.battlemetrics.com/rcon/players/${match.playerId}`;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            link.textContent = match.sharedName;
+
+            const vsSpan = document.createElement("span");
+            vsSpan.classList.add("bme-name-check-vs");
+            vsSpan.textContent = " vs ";
+
+            const currentNameSpan = document.createElement("span");
+            currentNameSpan.classList.add("bme-name-check-current");
+            currentNameSpan.textContent = match.currentName;
+
+            matchRow.append(scoreSpan, " ", link, vsSpan, currentNameSpan);
+            resultsEl.appendChild(matchRow);
+        }
+
+        analyseBtn.classList.remove("bme-button-disabled");
+    });
+}
+async function fetchPlayerNames(playerId) {
+    try {
+        const authToken = localStorage.getItem("BME_BATTLEMETRICS_API_KEY") || getAuthToken();
+        if (!authToken) return null;
+        const resp = await fetch(`https://api.battlemetrics.com/players/${encodeURIComponent(playerId)}?include=identifier&access_token=${encodeURIComponent(authToken)}`);
+        if (resp.status !== 200) throw new Error(`Status ${resp.status}`);
+        const data = await resp.json();
+        return data.included
+            ?.filter(item => item.type === "identifier" && item.attributes?.type === "name")
+            .map(item => item.attributes.identifier)
+            .filter(Boolean) ?? [];
+    } catch (error) {
+        if (!(error instanceof TypeError && error.message === "Failed to fetch"))
+            console.error(`BM-EXTRA: ${error}`);
+        return null;
+    }
+}
+function nameSimilarity(a, b) {
+    a = a.toLowerCase();
+    b = b.toLowerCase();
+    if (a === b) return 100;
+    const lenA = a.length;
+    const lenB = b.length;
+    if (!lenA || !lenB) return 0;
+    const dp = [];
+    for (let i = 0; i <= lenA; i++) dp[i] = [i];
+    for (let j = 0; j <= lenB; j++) dp[0][j] = j;
+    for (let i = 1; i <= lenA; i++) {
+        for (let j = 1; j <= lenB; j++) {
+            if (a[i - 1] === b[j - 1]) dp[i][j] = dp[i - 1][j - 1];
+            else dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+        }
+    }
+    return Math.round((1 - dp[lenA][lenB] / Math.max(lenA, lenB)) * 100);
+}
 function getAvatarTitle() {
     const element = document.createElement("tr");
     element.classList.add("css-147tpna");
@@ -277,8 +506,6 @@ function getAvatarElement(item, zoomable) {
     const lastSeen = item.lastSeen * 1000;
     const iso = new Date(lastSeen).toISOString();
 
-
-    // Commented out the html avatar loading until steamstatic.com can be verified
     
     // Escape avatar hash before injecting into HTML (it comes from external API)
     const escapedAvatar = document.createElement("span");
