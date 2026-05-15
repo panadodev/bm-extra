@@ -2,7 +2,9 @@ import { fetchWithRateLimit } from "../other/fetchWithRateLimit.js";
 
 export async function getRelatedPlayers(BMToken, BMID) {
     try {
-        const response = await fetchWithRateLimit(`https://api.battlemetrics.com/players/${BMID}/relationships/related-identifiers?version=%5E0.1.0&access_token=${BMToken}`);
+        const response = await fetchWithRateLimit(`https://api.battlemetrics.com/players/${BMID}/relationships/related-identifiers?version=%5E0.1.0`, {
+            headers: { "Authorization": `Bearer ${BMToken}` }
+        });
         if (!response.ok) return undefined;
 
         const data = await response.json();
