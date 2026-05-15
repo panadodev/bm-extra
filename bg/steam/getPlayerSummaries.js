@@ -1,32 +1,31 @@
 import { convertDate } from "../other/convertDate.js";
 
+const VISIBILITY_MAP = {
+    0: "Not Configured",
+    1: "Private",
+    2: "Private",
+    3: "Public",
+};
+
 export async function getPlayerSummaries(SteamToken, SteamID) {
-    const response = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${SteamToken}&steamids=${SteamID}`);
-    if (!response.ok) return;
+    const url = `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${SteamToken}&steamids=${SteamID}`;
+    const response = await fetch(url);
+    if (!response.ok) return undefined;
 
-    const data = await response.json();
-    const player = data.response.players[0];
+    const json = await response.json();
+    const player = json.response.players[0];
+    if (!player) return undefined;
 
-    let visibility = "";
-    let profileCreated = "";
+    const stateKey = player.profilestate === 0 ? 0 : player.communityvisibilitystate;
+    const visibility = VISIBILITY_MAP[stateKey] ?? "Private";
 
-    if (player.profilestate == 0) {
-        visibility = "Not Configured";
-    } else if (player.communityvisibilitystate === 3) {
-        visibility = "Public";
-    } else {
-        visibility = "Private";
-    }
-
-    if (player.timecreated === undefined) {
-        profileCreated = "Private";
-    } else {
-        profileCreated = convertDate(new Date(player.timecreated * 1000));
-    }
+    const profileCreated = player.timecreated != null
+        ? convertDate(new Date(player.timecreated * 1000))
+        : "Private";
 
     return {
-        visibility: visibility,
-        profileCreated: profileCreated,
+        visibility,
+        profileCreated,
         avatar: player.avatarmedium,
     };
 }

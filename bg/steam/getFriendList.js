@@ -1,16 +1,10 @@
 export async function getFriendList(SteamToken, SteamID) {
-    const response = await fetch(`https://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=${SteamToken}&steamid=${SteamID}&relationship=friend`);
-    if (!response.ok) return;
+    const url = `https://api.steampowered.com/ISteamUser/GetFriendList/v0001/?key=${SteamToken}&steamid=${SteamID}&relationship=friend`;
+    const response = await fetch(url);
+    if (!response.ok) return undefined;
 
-    const data = await response.json();
+    const json = await response.json();
+    if (!json.friendslist?.friends) return undefined;
 
-    if (data.friendslist === undefined) return;
-
-    const friends = [];
-
-    for (const friend of data.friendslist.friends) {
-        friends.push(friend.steamid);
-    }
-
-    return friends;
+    return json.friendslist.friends.map(f => f.steamid);
 }

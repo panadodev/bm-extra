@@ -1,6 +1,6 @@
 import { getTimeSpan } from "../../misc.js";
 
-export function getInfoPanel(bmSteamData, bmData, rustPremium, bmId) {
+export function getInfoPanel(bmSteamData, bmData, bmId) {
     const element = document.createElement("div");
 
     const header = document.createElement("div");
@@ -27,14 +27,14 @@ export function getInfoPanel(bmSteamData, bmData, rustPremium, bmId) {
     body.classList.add("bme-section-body");
     element.appendChild(body);
 
-    body.appendChild(getSteamInfoPanel(bmSteamData, rustPremium));
+    body.appendChild(getSteamInfoPanel(bmSteamData));
     body.appendChild(getBmInfoPanel(bmData, bmId));
 
     return element;
 }
 
 
-function getSteamInfoPanel(steam, rustPremium) {
+function getSteamInfoPanel(steam) {
     const settings = JSON.parse(localStorage.getItem("BME_BM_INFO_SETTINGS"))
     const element = document.createElement("div");
 
@@ -54,7 +54,6 @@ function getSteamInfoPanel(steam, rustPremium) {
     items.push(...getVisibilityElements(steam))
     items.push(...getSetupStateElements(steam));
     items.push(...getLimitedAccountElements(steam));
-    items.push(...getPremiumStateElement(rustPremium));
     items.push(createSeparator());
     items.push(...getGameBanCountElements(steam));
     items.push(...getVacBanCountElements(steam));
@@ -98,16 +97,6 @@ function getSetupStateElements(steam) {
     return [title, value];
 
 }
-function getPremiumStateElement(rustPremium) {
-    const title = createHtmlElement("dt", "Premium:");
-
-    const valueString = rustPremium === null ? "Unknown" : rustPremium;
-    const currentClass = rustPremium === null ? null : rustPremium ? "bme-green-text" : "bme-red-text";
-    const value = createHtmlElement("dd", valueString, currentClass ? [currentClass] : []);
-    return [title, value];
-
-}
-
 function getLimitedAccountElements(steam) {
     const title = createHtmlElement("dt", "Limited:");
 
@@ -163,7 +152,7 @@ function getSteamGameCountElements(steam, settings, isHistoric) {
     return [title, value];
 }
 function getSteamCombinedHoursElements(steam, settings, isHistoric) {
-    const title = createHtmlElement("dt", "Steam Hours:");
+    const title = createHtmlElement("dt", "All Games:");
 
     const valueString = !steam || steam.steamHours === null ? "Unknown" : steam.gameCount && steam.steamHours === 0 ? "Private" : `${steam.steamHours} hours`;
 

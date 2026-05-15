@@ -1,17 +1,18 @@
+const RUST_APP_ID = 252490;
+
 export async function getPlaytime(SteamToken, SteamID) {
-    const response = await fetch(`http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=${SteamToken}&steamid=${SteamID}`);
+    const url = `http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=${SteamToken}&steamid=${SteamID}`;
+    const response = await fetch(url);
     if (!response.ok) return "Error";
 
-    const data = await response.json();
+    const json = await response.json();
+    const games = json.response.games;
 
-    if (Object.keys(data.response).length === 0) {
-        return "Private";
-    }
+    if (!games?.length) return "Private";
+    if (games.every(g => g.playtime_forever === 0)) return "Private";
 
-    if (data.response.games.every((x) => x.playtime_forever === 0)) return "Private";
+    const rustGame = games.find(g => g.appid === RUST_APP_ID);
+    if (!rustGame) return "Private";
 
-    const rust = data.response.games.find((x) => x.appid === 252490);
-    if (rust === undefined) return "Private";
-
-    return Math.round((rust.playtime_forever / 60) * 10) / 10;
+    return Math.round((rustGame.playtime_forever / 60) * 10) / 10;
 }

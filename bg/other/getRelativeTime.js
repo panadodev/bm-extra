@@ -1,21 +1,21 @@
-const units = {
-    year: 24 * 60 * 60 * 1000 * 365,
-    month: (24 * 60 * 60 * 1000 * 365) / 12,
-    day: 24 * 60 * 60 * 1000,
-    hour: 60 * 60 * 1000,
-    minute: 60 * 1000,
-    second: 1000,
-};
+const formatter = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
 
-const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+const TIME_THRESHOLDS = [
+    { unit: "year",   ms: 365 * 24 * 60 * 60 * 1000 },
+    { unit: "month",  ms: 30 * 24 * 60 * 60 * 1000 },
+    { unit: "day",    ms: 24 * 60 * 60 * 1000 },
+    { unit: "hour",   ms: 60 * 60 * 1000 },
+    { unit: "minute", ms: 60 * 1000 },
+    { unit: "second", ms: 1000 },
+];
 
 export function getRelativeTime(date) {
-    const elapsed = date - new Date();
+    const diffMs = date.getTime() - Date.now();
+    const absDiff = Math.abs(diffMs);
 
-    for (const unit in units) {
-        if (Math.abs(elapsed) > units[unit] || unit == "second") {
-            const relativeTime = rtf.format(Math.round((elapsed / units[unit]) * 10) / 10, unit);
-            return relativeTime;
+    for (const { unit, ms } of TIME_THRESHOLDS) {
+        if (absDiff >= ms || unit === "second") {
+            return formatter.format(Math.round(diffMs / ms), unit);
         }
     }
 }

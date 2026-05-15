@@ -1,5 +1,5 @@
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
 export function isWithin24hours(date) {
-    const timeStamp = Math.round(new Date().getTime() / 1000);
-    const timeStampYesterday = timeStamp - 24 * 3600;
-    return date >= new Date(timeStampYesterday * 1000).getTime();
+    return (Date.now() - date.getTime()) < ONE_DAY_MS;
 }

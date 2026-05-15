@@ -44,9 +44,6 @@ function setupPlayerCache(bmId, authToken) {
     if (validate("bmProfile", settings, bmId))
         cache[bmId].bmProfile = getBmProfileData(bmId, authToken);
 
-    if (validate("rustPremium", settings, bmId))
-        cache[bmId].rustPremium = getRustPremiumStatus(cache[bmId].bmProfile);
-
     if (validate("steamFriends", settings, bmId))
         cache[bmId].steamFriends = getSteamFriends(cache[bmId].bmProfile, "steam");
 
@@ -108,11 +105,6 @@ function validate(section, { overview, identifier, sidebar, banPage }, bmId) {
             sidebar?.friends.enabled ||
             sidebar?.historicFriends.enabled ||
             sidebar?.publicBans.enabled;
-        if (needed) return true;
-    } else if (section === "rustPremium") {
-        if (cache[bmId]?.rustPremium !== undefined) return false;//Already Cached
-
-        const needed = overview?.showInfoPanel
         if (needed) return true;
     } else if (section === "steamFriends") {
         if (cache[bmId]?.steamFriends !== undefined) return false;//Already Cached
@@ -198,23 +190,7 @@ async function getBmProfileData(bmId, authToken) {
         return null;
     }
 }
-async function getRustPremiumStatus(bmProfile) {
-    bmProfile = await bmProfile;
-    const steamId = getSteamIdFromBmProfile(bmProfile)
-    if (!steamId) return;
 
-    const value = await getRustPremiumStatusFromFacepunch(steamId);
-    if (typeof (value) === "string") return null;
-    return value.premium;
-}
-async function getRustPremiumStatusFromFacepunch(steamId) {
-    try {
-        return await talkToBackgroundScript("BME_PREMIUM_STATUS", steamId, null)
-    } catch (error) {
-        console.error(error);
-        return "ERROR";
-    }
-}
 async function getBmRelations() {
 
 }

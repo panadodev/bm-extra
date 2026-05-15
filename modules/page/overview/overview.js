@@ -99,11 +99,10 @@ function getCurrentServersElement(servers) {
     return element;
 }
 
-export async function displayInfoPanel(bmId, bmProfile, steamData, bmActivity, rustPremium) {
+export async function displayInfoPanel(bmId, bmProfile, steamData, bmActivity) {
     bmProfile = await bmProfile;
     steamData = await steamData;
     bmActivity = await bmActivity;
-    rustPremium = await rustPremium;
 
     const steamIdObject = getSteamIdObject(bmProfile.included);
     const bmSteamData = getSteamData(steamIdObject, steamData);
@@ -121,7 +120,7 @@ export async function displayInfoPanel(bmId, bmProfile, steamData, bmActivity, r
 
     if (!identifierDiv) return;
 
-    const infoPanel = getInfoPanel(bmSteamData, bmData, rustPremium, bmId);
+    const infoPanel = getInfoPanel(bmSteamData, bmData, bmId);
     infoPanel.id = "bme-info-panel";
 
     if (shouldAbort(bmId, "bme-info-panel")) return;
