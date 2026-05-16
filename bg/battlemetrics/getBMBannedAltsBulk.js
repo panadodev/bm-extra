@@ -1,15 +1,15 @@
 import { fetchWithRateLimit } from "../other/fetchWithRateLimit.js";
 
 async function fetchPlayerBans(playerId, token) {
-    const url = `https://api.battlemetrics.com/bans?version=%5E0.1.0&filter[player]=${playerId}&access_token=${token}`;
-    const response = await fetchWithRateLimit(url);
+    const url = `https://api.battlemetrics.com/bans?version=%5E0.1.0&filter[player]=${playerId}`;
+    const response = await fetchWithRateLimit(url, { headers: { "Authorization": `Bearer ${token}` } });
     if (!response.ok) return null;
     return response.json();
 }
 
 async function fetchPlayerName(playerId, token) {
-    const url = `https://api.battlemetrics.com/players/${playerId}?version=%5E0.1.0&access_token=${token}`;
-    const response = await fetchWithRateLimit(url);
+    const url = `https://api.battlemetrics.com/players/${playerId}?version=%5E0.1.0`;
+    const response = await fetchWithRateLimit(url, { headers: { "Authorization": `Bearer ${token}` } });
     if (!response.ok) return playerId;
     const json = await response.json();
     return json.data?.attributes?.name ?? playerId;

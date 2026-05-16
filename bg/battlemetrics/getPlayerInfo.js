@@ -12,8 +12,8 @@ function isTrackedServer(server, yourServers) {
 }
 
 export async function getPlayerInfo(BMToken, BMID, YourServers) {
-    const url = `https://api.battlemetrics.com/players/${BMID}?include=server,identifier&fields[server]=name,ip,port&access_token=${BMToken}`;
-    const response = await fetch(url);
+    const url = `https://api.battlemetrics.com/players/${BMID}?include=server,identifier&fields[server]=name,ip,port`;
+    const response = await fetch(url, { headers: { "Authorization": `Bearer ${BMToken}` } });
     if (!response.ok) return undefined;
 
     const json = await response.json();

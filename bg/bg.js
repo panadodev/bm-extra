@@ -40,9 +40,15 @@ function downloadJsonFile(name, content) {
     const json = JSON.stringify(content, null, 4);
     const dataUrl = `data:application/json;charset=utf-8,${encodeURIComponent(json)}`;
 
+    const sanitized = String(name ?? "")
+        .replace(/[\/\\?%*:|"<>\x00-\x1f]/g, "_")
+        .replace(/\.{2,}/g, "_")
+        .replace(/^[.\s]+|[.\s]+$/g, "");
+    const safeName = sanitized || "download.json";
+
     chrome.downloads.download({
         url: dataUrl,
-        filename: name,
+        filename: safeName,
         saveAs: true,
     });
 }
@@ -197,6 +203,12 @@ async function sendWilljumsTeaminfo(values, apiKey, sender, returnObject) {
         const serverId = parts[1];
         const apiUrl = parts.slice(2).join("-"); // In case URL contains dashes
 
+        try {
+            if (new URL(apiUrl).protocol !== "https:") throw new Error("scheme");
+        } catch {
+            throw new Error("Willjums API URL must be https");
+        }
+
         const resp = await fetch(`${apiUrl}/${steamId}?server=${serverId}`, {
             method: "GET",
             headers: {
@@ -224,7 +236,9 @@ async function sendWilljumsTeaminfo(values, apiKey, sender, returnObject) {
 
 async function sendBmPing(bmId, apiKey, sender, returnObject) {
     try {
-        await fetchWithRateLimit(`https://api.battlemetrics.com/players/${bmId}?access_token=${apiKey}`);
+        await fetchWithRateLimit(`https://api.battlemetrics.com/players/${bmId}`, {
+            headers: { "Authorization": `Bearer ${apiKey}` }
+        });
         returnObject.status = "OK";
         returnObject.value = null;
         returnObject.rateLimitRemaining = bmRateLimitRemaining;
@@ -259,16 +273,17 @@ async function sendBmBannedAlts(bmId, BMToken, sender, returnObject) {
         const progressType = returnObject.type.replace("_RESOLVED", "_PROGRESS");
         const results = [];
 
+        const authHeader = { "Authorization": `Bearer ${BMToken}` };
         for (let i = 0; i < relatedPlayers.length; i++) {
             const [playerId, matchCount] = relatedPlayers[i];
             try {
-                const resp = await fetchWithRateLimit(`https://api.battlemetrics.com/bans?version=%5E0.1.0&filter[player]=${playerId}&access_token=${BMToken}`);
+                const resp = await fetchWithRateLimit(`https://api.battlemetrics.com/bans?version=%5E0.1.0&filter[player]=${playerId}`, { headers: authHeader });
                 if (!resp.ok) continue;
 
                 const data = await resp.json();
                 if (!data.data?.length) continue;
 
-                const playerResp = await fetchWithRateLimit(`https://api.battlemetrics.com/players/${playerId}?version=%5E0.1.0&access_token=${BMToken}`);
+                const playerResp = await fetchWithRateLimit(`https://api.battlemetrics.com/players/${playerId}?version=%5E0.1.0`, { headers: authHeader });
                 const playerData = playerResp.ok ? await playerResp.json() : null;
 
                 results.push({
@@ -310,7 +325,9 @@ async function sendEacBannedAlts(bmId, BMToken, sender, returnObject) {
         for (let i = 0; i < relatedPlayers.length; i++) {
             const [playerId, sharedCount] = relatedPlayers[i];
             try {
-                const resp = await fetchWithRateLimit(`https://api.battlemetrics.com/players/${playerId}?include=identifier&access_token=${BMToken}`);
+                const resp = await fetchWithRateLimit(`https://api.battlemetrics.com/players/${playerId}?include=identifier`, {
+                    headers: { "Authorization": `Bearer ${BMToken}` }
+                });
                 if (!resp.ok) continue;
 
                 const data = await resp.json();

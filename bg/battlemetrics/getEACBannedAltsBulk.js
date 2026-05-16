@@ -13,8 +13,8 @@ export async function getEACBannedAltsBulk(BMToken, relatedPlayers) {
     const bannedAlts = [];
     for (const [playerId, sharedCount] of relatedPlayers) {
         try {
-            const url = `https://api.battlemetrics.com/players/${playerId}?include=identifier&access_token=${BMToken}`;
-            const response = await fetchWithRateLimit(url);
+            const url = `https://api.battlemetrics.com/players/${playerId}?include=identifier`;
+            const response = await fetchWithRateLimit(url, { headers: { "Authorization": `Bearer ${BMToken}` } });
             if (!response.ok) continue;
 
             const json = await response.json();

@@ -1,6 +1,6 @@
 export async function getServerPlayers(BMToken, ServerID) {
-    const url = `https://api.battlemetrics.com/servers/${ServerID}?include=player,identifier&access_token=${BMToken}`;
-    const response = await fetch(url);
+    const url = `https://api.battlemetrics.com/servers/${ServerID}?include=player,identifier`;
+    const response = await fetch(url, { headers: { "Authorization": `Bearer ${BMToken}` } });
     if (!response.ok) return undefined;
 
     const json = await response.json();

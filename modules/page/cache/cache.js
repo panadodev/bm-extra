@@ -167,7 +167,9 @@ async function getSteamData(bmId) {
         const authToken = getAuthToken(); //Can only be accessed via an internal token
         if (!authToken) return console.error(`BME-EXTRA: Missing auth token.`);
 
-        const resp = await fetch(`https://api.battlemetrics.com/players/${bmId}/relationships/steam-profile?version=^0.1.0&access_token=${authToken}`);
+        const resp = await fetch(`https://api.battlemetrics.com/players/${bmId}/relationships/steam-profile?version=^0.1.0`, {
+            headers: { "Authorization": `Bearer ${authToken}` }
+        });
         if (resp?.status !== 200) throw new Error(`Failed to request steam data. | Status: ${resp?.status}`);
 
         const data = await resp.json()
@@ -180,7 +182,9 @@ async function getSteamData(bmId) {
 async function getBmProfileData(bmId, authToken) {
     try {
         const token = authToken.external ? authToken.external : authToken.internal;
-        const resp = await fetch(`https://api.battlemetrics.com/players/${bmId}?version=^0.1.0&include=server,identifier&access_token=${token}`);
+        const resp = await fetch(`https://api.battlemetrics.com/players/${bmId}?version=^0.1.0&include=server,identifier`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
         if (resp?.status !== 200) throw new Error(`Failed to request profile information. | Status: ${resp?.status}`);
 
         const data = resp.json()
@@ -197,7 +201,9 @@ async function getBmRelations() {
 async function getBmBanData(bmId, authToken) {
     try {
         const token = authToken.external ? authToken.external : authToken.internal;
-        const resp = await fetch(`https://api.battlemetrics.com/bans?version=^0.1.0&filter[player]=${bmId}&filter[expired]=true&access_token=${token}`);
+        const resp = await fetch(`https://api.battlemetrics.com/bans?version=^0.1.0&filter[player]=${bmId}&filter[expired]=true`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
         if (resp?.status !== 200) throw new Error(`Failed to request player activity. | Status: ${resp?.status}`);
 
         const data = await resp.json();
@@ -210,7 +216,9 @@ async function getBmBanData(bmId, authToken) {
 async function getBmActivity(bmId, authToken) {
     try {
         const token = authToken.external ? authToken.external : authToken.internal;
-        const resp = await fetch(`https://api.battlemetrics.com/activity?version=^0.1.0&tagTypeMode=and&filter[tags][blacklist]=2ff49080-f925-47e4-ab9b-9cdb75575695&filter[types][whitelist]=rustLog:playerReport,rustLog:playerDeath:PVP&filter[players]=${bmId}&include=organization,user&page[size]=1000&access_token=${token}`);
+        const resp = await fetch(`https://api.battlemetrics.com/activity?version=^0.1.0&tagTypeMode=and&filter[tags][blacklist]=2ff49080-f925-47e4-ab9b-9cdb75575695&filter[types][whitelist]=rustLog:playerReport,rustLog:playerDeath:PVP&filter[players]=${bmId}&include=organization,user&page[size]=1000`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
         if (resp?.status !== 200) throw new Error(`Failed to request player activity. | Status: ${resp?.status}`);
 
         const data = await resp.json()
@@ -229,7 +237,9 @@ async function getBmActivity(bmId, authToken) {
 }
 async function requestNextPage(url, token, page) {
     try {
-        const resp = await fetch(`${url}&access_token=${token}`);
+        const resp = await fetch(url, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
         if (resp?.status !== 200) return null;
 
         const data = await resp.json();
@@ -320,7 +330,9 @@ async function getCurrentServersPopulation(bmProfile, authToken) {
     const lastServer = await getLastServer(bmProfile)
     if (!lastServer?.online) return [];
 
-    const resp = await fetch(`https://api.battlemetrics.com/servers/${lastServer.id}?version=^0.1.0&include=identifier,player&access_token=${token}`)
+    const resp = await fetch(`https://api.battlemetrics.com/servers/${lastServer.id}?version=^0.1.0&include=identifier,player`, {
+        headers: { "Authorization": `Bearer ${token}` }
+    })
     if (resp?.status !== 200) return [];
     const data = await resp.json();
 

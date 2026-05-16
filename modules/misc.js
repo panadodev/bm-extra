@@ -201,7 +201,9 @@ export async function getMyServers(onlyIds) {
 async function requestMyServers(url, token, count = 0) {
     if (count > 2) return null;
     try {
-        const resp = await fetch(`${url}&access_token=${token}`);
+        const resp = await fetch(url, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
         const data = await resp.json();
 
         const servers = data.data.map(server => {

@@ -6,14 +6,15 @@ const TEAM_KEYWORDS = [" team", "teaming", "teamming", "limit", "rule", "allianc
 async function fetchAllActivity(initialUrl, BMToken) {
     const activities = [];
     let nextUrl = initialUrl;
+    const init = { headers: { "Authorization": `Bearer ${BMToken}` } };
 
     while (nextUrl) {
-        const response = await fetch(nextUrl);
+        const response = await fetch(nextUrl, init);
         if (!response.ok) break;
 
         const json = await response.json();
         activities.push(...json.data);
-        nextUrl = json.links?.next ? `${json.links.next}&access_token=${BMToken}` : null;
+        nextUrl = json.links?.next ?? null;
     }
 
     return activities;
@@ -32,7 +33,7 @@ function computeKD(kills, deaths) {
 }
 
 export async function getActivity(BMToken, Arkan, Guardian, BMID) {
-    const url = `https://api.battlemetrics.com/activity?tagTypeMode=and&filter[types][blacklist]=event:query&filter[players]=${BMID}&include=organization,user&page[size]=1000&access_token=${BMToken}`;
+    const url = `https://api.battlemetrics.com/activity?tagTypeMode=and&filter[types][blacklist]=event:query&filter[players]=${BMID}&include=organization,user&page[size]=1000`;
     const activities = await fetchAllActivity(url, BMToken);
 
     const reporters = {

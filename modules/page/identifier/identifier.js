@@ -459,7 +459,9 @@ async function fetchPlayerNames(playerId) {
     try {
         const authToken = localStorage.getItem("BME_BATTLEMETRICS_API_KEY") || getAuthToken();
         if (!authToken) return null;
-        const resp = await fetch(`https://api.battlemetrics.com/players/${encodeURIComponent(playerId)}?include=identifier&access_token=${encodeURIComponent(authToken)}`);
+        const resp = await fetch(`https://api.battlemetrics.com/players/${encodeURIComponent(playerId)}?include=identifier`, {
+            headers: { "Authorization": `Bearer ${authToken}` }
+        });
         if (resp.status !== 200) throw new Error(`Status ${resp.status}`);
         const data = await resp.json();
         return data.included
@@ -506,33 +508,55 @@ function getAvatarElement(item, zoomable) {
     const lastSeen = item.lastSeen * 1000;
     const iso = new Date(lastSeen).toISOString();
 
-    
-    // Escape avatar hash before injecting into HTML (it comes from external API)
-    const escapedAvatar = document.createElement("span");
-    escapedAvatar.textContent = item.avatar;
-    const safeAvatar = escapedAvatar.innerHTML; // HTML-entity-encoded
+    const identifierTd = document.createElement("td");
+    identifierTd.dataset.title = "Identifier";
 
-    //Heavily modified Standard BattleMetrics Identifier
-    tr.innerHTML = `
-        <td data-title="Identifier">
-            <div title="${safeAvatar}" class="css-8uhtka bme-avatar-container ${zoomable ? "bme-zoomable-avatar" : ""}">
-                <div class="bme-avatar-placeholder">
-                    <div>
-                        <!--<img src="https://avatars.fastly.steamstatic.com/${safeAvatar}_full.jpg" class="bme-avatar-identifier">-->
-                    </div>
-                </div>
-                <span class="css-q39y9k" title="${safeAvatar}">${safeAvatar}${item.avatarHits !== "N/A" ? ` | Seen on ${item.avatarHits < 101 ? item.avatarHits : "100+"} players` : ""}</span>
-            </div>
-        </td>
-        <td data-title="Type">
-            <div class="css-18s4qom">Avatar</div>
-        </td>
-        <td data-title="Last Seen">
-            <time>${`${iso.substring(8, 10)}/${iso.substring(5, 7)}/${iso.substring(0, 4)}`}</time><br />
-            <time class="css-18s4qom">${iso.substring(11, 16)}</time>
-            <time class="css-18s4qom">${getTimeSpan(lastSeen)} ago</time>
-        </td>
-    `;
+    const container = document.createElement("div");
+    container.className = "css-8uhtka bme-avatar-container";
+    if (zoomable) container.classList.add("bme-zoomable-avatar");
+    container.title = item.avatar;
 
+    const placeholder = document.createElement("div");
+    placeholder.className = "bme-avatar-placeholder";
+    placeholder.appendChild(document.createElement("div"));
+    container.appendChild(placeholder);
+
+    const label = document.createElement("span");
+    label.className = "css-q39y9k";
+    label.title = item.avatar;
+    const hitsSuffix = item.avatarHits !== "N/A"
+        ? ` | Seen on ${item.avatarHits < 101 ? item.avatarHits : "100+"} players`
+        : "";
+    label.textContent = `${item.avatar}${hitsSuffix}`;
+    container.appendChild(label);
+
+    identifierTd.appendChild(container);
+
+    const typeTd = document.createElement("td");
+    typeTd.dataset.title = "Type";
+    const typeDiv = document.createElement("div");
+    typeDiv.className = "css-18s4qom";
+    typeDiv.textContent = "Avatar";
+    typeTd.appendChild(typeDiv);
+
+    const lastSeenTd = document.createElement("td");
+    lastSeenTd.dataset.title = "Last Seen";
+
+    const dateTime = document.createElement("time");
+    dateTime.textContent = `${iso.substring(8, 10)}/${iso.substring(5, 7)}/${iso.substring(0, 4)}`;
+    lastSeenTd.appendChild(dateTime);
+    lastSeenTd.appendChild(document.createElement("br"));
+
+    const hourTime = document.createElement("time");
+    hourTime.className = "css-18s4qom";
+    hourTime.textContent = iso.substring(11, 16);
+    lastSeenTd.appendChild(hourTime);
+
+    const agoTime = document.createElement("time");
+    agoTime.className = "css-18s4qom";
+    agoTime.innerHTML = `${getTimeSpan(lastSeen)} ago`;
+    lastSeenTd.appendChild(agoTime);
+
+    tr.append(identifierTd, typeTd, lastSeenTd);
     return tr;
 }

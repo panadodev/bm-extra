@@ -171,6 +171,13 @@ class Willjums {
             return "ERROR:NO_API_URL";
         }
 
+        try {
+            if (new URL(apiUrl).protocol !== "https:") throw new Error("scheme");
+        } catch {
+            console.error("Teaminfo API URL must be https");
+            return "ERROR:INVALID_API_URL";
+        }
+
         const apiToken = localStorage.getItem("BME_TEAMINFO_API_TOKEN");
         if (!apiToken) {
             console.error("Teaminfo API Token is not configured");

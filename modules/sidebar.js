@@ -691,7 +691,7 @@ async function readClipboardRich() {
         if (item.types.includes("text/html")) {
             const blob = await item.getType("text/html");
             const value = await blob.text();
-            return { type: "text/html", value: stripGyazoImgLink(value) };
+            return { type: "text/html", value: sanitizeClipboardHtml(value) };
         }
 
         if (item.types.includes("text/plain")) {
@@ -702,21 +702,47 @@ async function readClipboardRich() {
     }
     return null;
 }
-function stripGyazoImgLink(html) {
-    const doc = document.createElement("div");
-    doc.innerHTML = html;
-    const childNodes = Array.from(doc.children);
 
+const ALLOWED_CLIPBOARD_TAGS = new Set(["A", "B", "I", "STRONG", "EM", "BR", "P", "DIV", "SPAN"]);
+
+function sanitizeClipboardHtml(html) {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const body = doc.body;
+
+    // Preserve the Gyazo behavior: when an <a href="X"> is followed by <img src="X.png">,
+    // drop the trailing image (and an adjacent <br>).
+    const topLevel = Array.from(body.children);
     let lastLink = "";
-    for (let i = childNodes.length - 1; i >= 0; i--) {
-        const item = childNodes[i];
-        if (item.nodeName === "A") lastLink = item.href;
-        if (item.nodeName === "IMG" && item.src === `${lastLink}.png`) {
-            item.remove();
-            if (childNodes[i + 1]?.nodeName === "BR") childNodes[i + 1].remove()
+    for (let i = topLevel.length - 1; i >= 0; i--) {
+        const node = topLevel[i];
+        if (node.nodeName === "A") lastLink = node.href;
+        if (node.nodeName === "IMG" && node.src === `${lastLink}.png`) {
+            node.remove();
+            if (topLevel[i + 1]?.nodeName === "BR") topLevel[i + 1].remove();
         }
     }
-    return doc.innerHTML;
+
+    sanitizeNode(body);
+    return body.innerHTML;
+}
+
+function sanitizeNode(parent) {
+    for (const child of Array.from(parent.childNodes)) {
+        if (child.nodeType === Node.TEXT_NODE) continue;
+        if (child.nodeType !== Node.ELEMENT_NODE) { child.remove(); continue; }
+
+        sanitizeNode(child);
+
+        if (!ALLOWED_CLIPBOARD_TAGS.has(child.nodeName)) {
+            child.replaceWith(...Array.from(child.childNodes));
+            continue;
+        }
+
+        for (const attr of Array.from(child.attributes)) {
+            if (child.nodeName === "A" && attr.name === "href" && /^https?:\/\//i.test(attr.value)) continue;
+            child.removeAttribute(attr.name);
+        }
+    }
 }
 async function getBanHeaderElement(type) {
     const banForm = await getElementWhenAppears("ban-form", true);
