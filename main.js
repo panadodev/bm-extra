@@ -13,7 +13,7 @@ async function main(urlString) {
     try {
         const { router } = await import(chrome.runtime.getURL('./modules/page/router.js'));
         const url = new URL(urlString);
-        router(url);
+        await router(url);
     } catch (err) {
         if (err.message?.includes('Extension context invalidated')) return;
         throw err;

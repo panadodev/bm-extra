@@ -187,7 +187,7 @@ async function getBmProfileData(bmId, authToken) {
         });
         if (resp?.status !== 200) throw new Error(`Failed to request profile information. | Status: ${resp?.status}`);
 
-        const data = resp.json()
+        const data = await resp.json()
         return data;
     } catch (error) {
         console.error(`BM-EXTRA: ${error}`);
@@ -460,16 +460,6 @@ async function getCurrentTeam(bmProfile, authToken) {
     }
 }
 
-async function getAtlasTeaminfo(steamId, serverId, token) {
-    const data = await talkToBackgroundScript("BME_ATLAS_TEAMINFO", `${steamId}-${serverId}`, token);
-    const result = data?.data?.attributes?.result[0]?.children[1]?.children[0]?.children[0]?.reference.result;
-    if (!result) {
-        console.error(`Failed to request teaminfo | Status: ${resp.status} | Result: ${result}`);
-        return "error";
-    }
-
-    return result;
-}
 async function getPublicBans(bmProfile) {
     bmProfile = await bmProfile;
     const steamId = getSteamIdFromBmProfile(bmProfile)

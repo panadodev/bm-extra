@@ -53,9 +53,8 @@ export async function displayServerActivity(bmId, bmProfile) {
     const title = rconElement?.firstChild;
     if (!title) return console.error("BM-EXTRA: Failed to setup serverElement.")
     const serverElement = getCurrentServersElement(onlineServers.length ? onlineServers : [servers[0]]);
-    
-    serverElement.id = "bme-server-panel"
     if (!serverElement) return console.error("BM-EXTRA: serverElement failed to assemble.")
+    serverElement.id = "bme-server-panel"
 
     if (shouldAbort(bmId, "bme-server-panel")) return;
     title.insertAdjacentElement("afterend", serverElement);
@@ -263,6 +262,7 @@ function isAimTrainingServer(server) {
 
 export async function removeSteamInformation(bmId) {
     const link = await getElementWhenAppears("links", true);
+    if (!link) return console.error("BM-EXTRA: Failed to locate links element for removeSteamInformation.");
 
     let parent = link.parentNode;
     while (parent) {

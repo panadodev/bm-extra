@@ -36,6 +36,10 @@ class BestRust {
     }
 
     async getTeamInfo(steamId, serverId, token) {
+        const triggers = [
+            "edb0be86-6f5e-4e4b-a655-5fcecd4af11f",
+            "4cc932cc-8a86-440f-95aa-d8d99a8ac6ec",
+        ];
         const payload = getBrPayload(triggers, steamId);
         const resp = await fetch(`https://api.battlemetrics.com/servers/${serverId}/command`, {
             method: "POST",

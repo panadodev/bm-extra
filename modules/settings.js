@@ -660,6 +660,28 @@ function getSidebarSettings() {
     )
     publicBansSegment.append(publicBansSpot)
 
+    const bannedAltsSegment = document.createElement("div")
+    bannedAltsSegment.classList.add("bme-settings-segment");
+
+    const bannedAltsEnabled = getSettingsElement(
+        "toggle", "Show Banned Alts",
+        "Shows a sidebar panel with BM and EAC banned alts for the player.",
+        null, settingsBucket, "bannedAlts-enabled",
+        settings.bannedAlts.enabled, { segment: bannedAltsSegment }
+    )
+
+    const bannedAltsSpot = getSettingsElement(
+        "switch", "Position:",
+        "Choose which sidebar spot should the banned alts panel be present.",
+        null, settingsBucket, "bannedAlts-spot", settings.bannedAlts.spot, { options: allSidebarSlots }
+    )
+    const bannedAltsAutoRun = getSettingsElement(
+        "toggle", "Auto Run on Load",
+        "Automatically runs both banned alts checks when the page loads.",
+        null, settingsBucket, "bannedAlts-autoRun", settings.bannedAlts.autoRun
+    )
+    bannedAltsSegment.append(bannedAltsSpot, bannedAltsAutoRun)
+
     const resetButton = getResetButton("bm-sidebar")
     element.append(
         currentTeamEnabled, currentTeamSegment,
@@ -667,6 +689,7 @@ function getSidebarSettings() {
         steamFriendsEnabled, steamFriendsSegment,
         historicFriendsEnabled, historicFriendsSegment,
         publicBansEnabled, publicBansSegment,
+        bannedAltsEnabled, bannedAltsSegment,
         resetButton
     )
     return element;
@@ -1986,6 +2009,12 @@ function checkSidebarSettings() {
         const defaultSettings = getDefaultSidebarSettings();
         localStorage.setItem("BME_SIDEBAR_SETTINGS", JSON.stringify(defaultSettings));
     }
+    // Migrate: add bannedAlts without wiping existing settings
+    const _sidebarMigrate = JSON.parse(localStorage.getItem("BME_SIDEBAR_SETTINGS"));
+    if (_sidebarMigrate && !_sidebarMigrate.bannedAlts) {
+        _sidebarMigrate.bannedAlts = { enabled: false, spot: "left-slot-3", autoRun: false };
+        localStorage.setItem("BME_SIDEBAR_SETTINGS", JSON.stringify(_sidebarMigrate));
+    }
 }
 function getDefaultSidebarSettings() {
     const settings = {};
@@ -2013,6 +2042,11 @@ function getDefaultSidebarSettings() {
     settings.publicBans = {}
     settings.publicBans.enabled = false;
     settings.publicBans.spot = "left-slot-2";
+
+    settings.bannedAlts = {};
+    settings.bannedAlts.enabled = false;
+    settings.bannedAlts.spot = "left-slot-3";
+    settings.bannedAlts.autoRun = false;
 
     return settings;
 }

@@ -1,4 +1,6 @@
-import { getElementWhenAppears, getLastServer, getSteamFriendlistFromRustApi, getSteamFriendlistFromSteam, getTimeSpan, removeSidebars, setNativeValue } from "./misc.js";
+import { getBmInfoTimeString, getElementWhenAppears, getLastServer, getSteamFriendlistFromRustApi, getSteamFriendlistFromSteam, getTimeSpan, removeSidebars, setNativeValue } from "./misc.js";
+import { cache } from "./page/cache/cache.js";
+import { checkAltsWithProgress } from "./page/overview/getInfoPanel.js";
 
 export async function insertSidebars() {
     const mainElement = await getElementWhenAppears("main", true);
@@ -765,4 +767,179 @@ function getBanDurationString(timestamp, locale = "en-us") {
         hour: "numeric",
         minute: "2-digit",
     }).format(new Date(timestamp));
+}
+
+export async function insertBannedAltsSidebarElement(bmId, settings) {
+    const sidebarSettings = JSON.parse(localStorage.getItem("BME_SIDEBAR_SETTINGS"));
+    if (!sidebarSettings) return console.error(`BME-EXTRA: Sidebar settings are missing!`);
+
+    const spot = sidebarSettings.bannedAlts.spot;
+    const sidebarSlot = document.getElementById(`bme-sidebar-${spot}`);
+    if (!sidebarSlot) return console.error(`BM-EXTRA: Sidebar element couldn't be located: bme-sidebar-${spot}`);
+
+    const element = getBannedAltsElement(bmId, sidebarSettings.bannedAlts.autoRun);
+    if (!sidebarSlot.hasChildNodes()) sidebarSlot.appendChild(element);
+}
+function getBannedAltsElement(bmId, autoRun) {
+    const element = document.createElement("div");
+    element.classList.add("bme-sidebar-banned-alts");
+
+    const header = document.createElement("div");
+    header.classList.add("bme-friendlist-header", "bme-banned-alts-header");
+    const title = document.createElement("h1");
+    title.innerText = "Banned Alts:";
+    header.appendChild(title);
+
+    const toggleLabel = document.createElement("label");
+    toggleLabel.classList.add("bme-banned-alts-vpn-toggle");
+    const toggleInput = document.createElement("input");
+    toggleInput.type = "checkbox";
+    const savedIgnore = localStorage.getItem("BME_BANNED_ALTS_IGNORE_VPNS");
+    toggleInput.checked = savedIgnore === null ? true : savedIgnore === "true";
+    toggleInput.addEventListener("change", () => {
+        localStorage.setItem("BME_BANNED_ALTS_IGNORE_VPNS", toggleInput.checked);
+    });
+    toggleLabel.append(toggleInput, "Ignore VPNs");
+    header.appendChild(toggleLabel);
+
+    element.appendChild(header);
+
+    const body = document.createElement("div");
+    body.classList.add("bme-banned-alts-body");
+    element.appendChild(body);
+
+    const [bmSection, runBm] = makeBannedAltSection(
+        "BM Banned Alts:",
+        bmId, "bmBannedAlts",
+        (progressEl) => {
+            const token = localStorage.getItem("BME_BATTLEMETRICS_API_KEY");
+            if (!token) { progressEl.innerText = "No API key"; return Promise.resolve(null); }
+            return checkAltsWithProgress("BME_BM_ALTS", bmId, token, progressEl, { ignoreVpns: toggleInput.checked });
+        },
+        renderBmAltResults
+    );
+    body.appendChild(bmSection);
+
+    const [eacSection, runEac] = makeBannedAltSection(
+        "EAC Banned Alts:",
+        bmId, "eacBannedAlts",
+        (progressEl) => {
+            const token = localStorage.getItem("BME_BATTLEMETRICS_API_KEY");
+            if (!token) { progressEl.innerText = "No API key"; return Promise.resolve(null); }
+            return checkAltsWithProgress("BME_EAC_ALTS", bmId, token, progressEl, { ignoreVpns: toggleInput.checked });
+        },
+        renderEacAltResults
+    );
+    body.appendChild(eacSection);
+
+    if (autoRun) { runBm(); runEac(); }
+
+    return element;
+}
+function makeBannedAltSection(labelText, bmId, cacheKey, fetcher, renderer) {
+    const section = document.createElement("div");
+    section.classList.add("bme-banned-alts-section");
+
+    const headerRow = document.createElement("div");
+    headerRow.classList.add("bme-banned-alts-header-row");
+    const label = document.createElement("span");
+    label.innerText = labelText;
+    const checkBtn = document.createElement("a");
+    checkBtn.innerText = "Check";
+    checkBtn.classList.add("bme-banned-alts-check-btn");
+    headerRow.append(label, checkBtn);
+    section.appendChild(headerRow);
+
+    const progressRow = document.createElement("div");
+    progressRow.classList.add("bme-banned-alts-progress-row");
+    progressRow.hidden = true;
+    section.appendChild(progressRow);
+
+    const resultsEl = document.createElement("div");
+    resultsEl.classList.add("bme-banned-alts-results");
+    section.appendChild(resultsEl);
+
+    const cached = cache[bmId]?.[cacheKey];
+    if (cached !== undefined) renderer(resultsEl, cached);
+
+    async function run() {
+        checkBtn.classList.add("bme-banned-alts-check-btn--busy");
+        progressRow.hidden = false;
+        resultsEl.innerHTML = "";
+        try {
+            const results = await fetcher(progressRow);
+            progressRow.hidden = true;
+            if (results !== null) {
+                if (!cache[bmId]) cache[bmId] = {};
+                cache[bmId][cacheKey] = results;
+                renderer(resultsEl, results);
+            }
+        } catch {
+            progressRow.hidden = true;
+            resultsEl.innerText = "Error";
+        }
+        checkBtn.classList.remove("bme-banned-alts-check-btn--busy");
+    }
+
+    checkBtn.onclick = run;
+    return [section, run];
+}
+function renderBmAltResults(container, results) {
+    container.innerHTML = "";
+    if (!Array.isArray(results) || results.length === 0) {
+        const p = document.createElement("p");
+        p.classList.add("bme-banned-alts-empty");
+        p.innerText = "None found";
+        container.appendChild(p);
+        return;
+    }
+    for (const player of results) {
+        const item = document.createElement("div");
+        item.classList.add("bme-banned-alt-item");
+
+        const link = document.createElement("a");
+        link.href = `https://www.battlemetrics.com/rcon/players/${player.id}`;
+        link.target = "_blank";
+        link.classList.add("bme-banned-alt-name");
+        link.innerText = player.name || player.id;
+
+        const meta = document.createElement("span");
+        meta.classList.add("bme-banned-alt-meta");
+        const bans = player.banCount;
+        const ips = player.matchCount;
+        meta.innerText = `${bans} BM ban${bans !== 1 ? "s" : ""} · ${ips} shared IP${ips !== 1 ? "s" : ""}`;
+
+        item.append(link, meta);
+        container.appendChild(item);
+    }
+}
+function renderEacAltResults(container, results) {
+    container.innerHTML = "";
+    if (!Array.isArray(results) || results.length === 0) {
+        const p = document.createElement("p");
+        p.classList.add("bme-banned-alts-empty");
+        p.innerText = "None found";
+        container.appendChild(p);
+        return;
+    }
+    for (const player of results) {
+        const item = document.createElement("div");
+        item.classList.add("bme-banned-alt-item");
+
+        const link = document.createElement("a");
+        link.href = `https://www.battlemetrics.com/rcon/players/${player.id}`;
+        link.target = "_blank";
+        link.classList.add("bme-banned-alt-name");
+        link.innerText = player.name || player.id;
+
+        const meta = document.createElement("span");
+        meta.classList.add("bme-banned-alt-meta");
+        const banType = player.temp ? "Temp" : "Perm";
+        const ips = player.sharedCount;
+        const timeAgo = player.lastBan ? `${getBmInfoTimeString(Date.now() - new Date(player.lastBan).getTime())} ago` : null;
+        meta.innerText = [banType + " ban", `${ips} shared IP${ips !== 1 ? "s" : ""}`, timeAgo].filter(Boolean).join(" · ");
+
+        item.append(link, meta);
+        container.appendChild(item);
+    }
 }

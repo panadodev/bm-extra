@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "bm-extra",
-    "version": "2.2.17",
+    "version": "2.2.18",
     "description": "BattleMetrics Extension that aims to enhance your experience with quality of life features.",
     "author": "FlQyD | panadodev",
     "content_scripts": [
@@ -28,7 +28,11 @@
         {
             "resources": [
                 "assets/img/*.png",
-                "modules/*.js"
+                "modules/*.js",
+                "modules/page/*.js",
+                "modules/page/cache/*.js",
+                "modules/page/identifier/*.js",
+                "modules/page/overview/*.js"
             ],
             "matches": [
                 "*://www.battlemetrics.com/*",

@@ -29,8 +29,8 @@ chrome.runtime.onMessage.addListener(async (req, sender) => {
     // if (req.type.startsWith("BME_PUBLIC_BANS")) return sendPublicBans(req.subject, req.apiKey, sender, returnObject);
     if (req.type.startsWith("BME_ATLAS_TEAMINFO")) return sendAtlasTeaminfo(req.subject, req.apiKey, sender, returnObject);
     if (req.type.startsWith("BME_WILLJUMS_TEAMINFO")) return sendWilljumsTeaminfo(req.subject, req.apiKey, sender, returnObject);
-    if (req.type.startsWith("BME_BM_ALTS")) return sendBmBannedAlts(req.subject, req.apiKey, sender, returnObject);
-    if (req.type.startsWith("BME_EAC_ALTS")) return sendEacBannedAlts(req.subject, req.apiKey, sender, returnObject);
+    if (req.type.startsWith("BME_BM_ALTS")) return sendBmBannedAlts(req.subject, req.apiKey, req.ignoreVpns ?? false, sender, returnObject);
+    if (req.type.startsWith("BME_EAC_ALTS")) return sendEacBannedAlts(req.subject, req.apiKey, req.ignoreVpns ?? false, sender, returnObject);
     if (req.type.startsWith("BME_BM_PING")) return sendBmPing(req.subject, req.apiKey, sender, returnObject);
 
 })
@@ -102,7 +102,7 @@ async function sendSteamPlayerSummaries(steamIds, API_KEY, sender, returnObject)
     try {
         const resp = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${API_KEY}&steamids=${steamIds}`);
         if (resp.status === 429) throw new Error("Rate Limit")
-        if (resp?.status !== 200) throw new Error(`Requesting Steam Player Summaries Failed | steamId: ${steamId} | API KEY: ${apiKey.substring(0, 10)}... | Status: ${resp?.status}`)
+        if (resp?.status !== 200) throw new Error(`Requesting Steam Player Summaries Failed | steamIds: ${steamIds} | API KEY: ${API_KEY.substring(0, 10)}... | Status: ${resp?.status}`)
 
         const data = await resp.json();
         returnObject.status = "OK";
@@ -129,7 +129,7 @@ async function sendSteamPlayerBanSummaries(steamIds, API_KEY, sender, returnObje
     try {
         const resp = await fetch(`https://api.steampowered.com/ISteamUser/GetPlayerBans/v1/?key=${API_KEY}&steamids=${steamIds}`);
         if (resp.status === 429) throw new Error("Rate Limit")
-        if (resp?.status !== 200) throw new Error(`Requesting Steam Ban Summaries Failed | steamId: ${steamId} | API KEY: ${apiKey.substring(0, 10)}... | Status: ${resp?.status}`)
+        if (resp?.status !== 200) throw new Error(`Requesting Steam Ban Summaries Failed | steamIds: ${steamIds} | API KEY: ${API_KEY.substring(0, 10)}... | Status: ${resp?.status}`)
 
         const data = await resp.json();
         returnObject.status = "OK";
@@ -264,9 +264,9 @@ chrome.runtime.onMessage.addListener(async (request, sender) => {
     }
 });
 
-async function sendBmBannedAlts(bmId, BMToken, sender, returnObject) {
+async function sendBmBannedAlts(bmId, BMToken, ignoreVpns, sender, returnObject) {
     try {
-        const relatedPlayers = await getRelatedPlayers(BMToken, bmId);
+        const relatedPlayers = await getRelatedPlayers(BMToken, bmId, ignoreVpns);
         if (!relatedPlayers) throw new Error("Failed to fetch related players");
 
         const total = relatedPlayers.length;
@@ -278,20 +278,20 @@ async function sendBmBannedAlts(bmId, BMToken, sender, returnObject) {
             const [playerId, matchCount] = relatedPlayers[i];
             try {
                 const resp = await fetchWithRateLimit(`https://api.battlemetrics.com/bans?version=%5E0.1.0&filter[player]=${playerId}`, { headers: authHeader });
-                if (!resp.ok) continue;
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data.data?.length) {
+                        const playerResp = await fetchWithRateLimit(`https://api.battlemetrics.com/players/${playerId}?version=%5E0.1.0`, { headers: authHeader });
+                        const playerData = playerResp.ok ? await playerResp.json() : null;
 
-                const data = await resp.json();
-                if (!data.data?.length) continue;
-
-                const playerResp = await fetchWithRateLimit(`https://api.battlemetrics.com/players/${playerId}?version=%5E0.1.0`, { headers: authHeader });
-                const playerData = playerResp.ok ? await playerResp.json() : null;
-
-                results.push({
-                    id: playerId,
-                    name: playerData?.data?.attributes?.name || playerId,
-                    matchCount,
-                    banCount: data.data.length,
-                });
+                        results.push({
+                            id: playerId,
+                            name: playerData?.data?.attributes?.name || playerId,
+                            matchCount,
+                            banCount: data.data.length,
+                        });
+                    }
+                }
             } catch (error) {
                 if (error.message === "RATE_LIMIT") throw error;
                 console.error(error);
@@ -312,10 +312,9 @@ async function sendBmBannedAlts(bmId, BMToken, sender, returnObject) {
         return chrome.tabs.sendMessage(sender.tab.id, returnObject);
     }
 }
-
-async function sendEacBannedAlts(bmId, BMToken, sender, returnObject) {
+async function sendEacBannedAlts(bmId, BMToken, ignoreVpns, sender, returnObject) {
     try {
-        const relatedPlayers = await getRelatedPlayers(BMToken, bmId);
+        const relatedPlayers = await getRelatedPlayers(BMToken, bmId, ignoreVpns);
         if (!relatedPlayers) throw new Error("Failed to fetch related players");
 
         const total = relatedPlayers.length;
@@ -340,6 +339,7 @@ async function sendEacBannedAlts(bmId, BMToken, sender, returnObject) {
                         id: playerId,
                         name: data.data?.attributes?.name || playerId,
                         sharedCount,
+                        lastBan: steamIdentifier.attributes.metadata.rustBans.lastBan ?? null,
                         temp: steamIdentifier.attributes.metadata.rustBans.banned ? false : true,
                     });
                 }

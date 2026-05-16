@@ -228,7 +228,7 @@ function revertItems(arr, buttons) {
     for (const item of arr) item.key.textContent = item.originalValue;
 
     if (buttons) {
-        const buttons = Array.from(document.querySelectorAll(".bme-button-redacted"));
-        for (const button of buttons) button.classList.remove("bme-button-redacted")
+        const buttonElements = Array.from(document.querySelectorAll(".bme-button-redacted"));
+        for (const button of buttonElements) button.classList.remove("bme-button-redacted")
     }
 }

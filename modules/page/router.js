@@ -1,13 +1,13 @@
 import { removeSidebars } from "../misc.js";
 import { cache, setupCacheFor } from "../page/cache/cache.js";
 import { checkAndSetupSettingsIfMissing } from "../settings.js";
-import { insertBanPresets, insertFriendComparator, insertFriendsSidebarElement, insertHistoricFriendsSidebarElement, insertPublicBansSidebarElement, insertSidebars, insertTeaminfoSidebarElement } from "../sidebar.js";
+import { insertBanPresets, insertBannedAltsSidebarElement, insertFriendComparator, insertFriendsSidebarElement, insertHistoricFriendsSidebarElement, insertPublicBansSidebarElement, insertSidebars, insertTeaminfoSidebarElement } from "../sidebar.js";
 import { checkForUpdates, convertTimestampsToDay, displayAvatar, displaySettingsButton, redactIdentifiers, selectLastServer, swapBattleEyeGuid } from "./display.js";
 import { addSharedIpNameCheck, displayAvatars, highlightVpnIdentifiers, showExtraDataOnIps } from "./identifier/identifier.js";
 import { advancedBans, closeAdminLog, displayAlertLink, displayInfoPanel, displayServerActivity, hideIpOnProfile, limitItem, removeSteamInformation, setupRateLimitBadge } from "./overview/overview.js";
 
 let settingsChecked = false;
-export function router(url) {
+export async function router(url) {
     if (!settingsChecked) {
         checkAndSetupSettingsIfMissing();
 
@@ -27,8 +27,8 @@ export function router(url) {
         const overviewSettings = JSON.parse(localStorage.getItem("BME_OVERVIEW_SETTINGS"));
         if (overviewSettings?.showRateLimit) setupRateLimitBadge();
 
-        if (path[3] === undefined) return onOverviewPage(bmId);
-        if (path[3] === "identifiers") return onIdentifierPage(bmId);
+        if (path[3] === undefined) return await onOverviewPage(bmId);
+        if (path[3] === "identifiers") return await onIdentifierPage(bmId);
     }
 
     //rcon/bans/add...
@@ -38,7 +38,7 @@ export function router(url) {
 
         setupCacheFor(bmId, "BAN_PAGE");
 
-        return onAddBanPage(bmId);
+        return await onAddBanPage(bmId);
     }
 
     //Remove sidebar in any other case
@@ -97,6 +97,7 @@ async function sidebar(bmId, playerCache, settings) {
     if (settings.historicFriends?.enabled) insertHistoricFriendsSidebarElement(playerCache.historicFriends, playerCache.steamFriends, cache.connectedPlayersData, cache.connectedPlayersBanData, playerCache.serverPop, settings);
     if (settings.currentTeam?.enabled) insertTeaminfoSidebarElement(playerCache.team, cache.connectedPlayersData, cache.connectedPlayersBanData, settings);
     if (settings.publicBans?.enabled) insertPublicBansSidebarElement(playerCache.publicBans);
+    if (settings.bannedAlts?.enabled) insertBannedAltsSidebarElement(bmId, settings);
 
     if (settings.presets?.enabled) insertBanPresets(settings, playerCache.bmProfile);
 }

@@ -429,3 +429,130 @@ body {
     transform: scale(1.03);
     filter: brightness(130%);
 }
+
+/* Banned Alts Panel */
+.bme-banned-alts-header {
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bme-banned-alts-vpn-toggle {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: #aaa;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.bme-banned-alts-vpn-toggle input {
+    cursor: pointer;
+    accent-color: #0c5da5;
+    margin: 0;
+}
+.bme-banned-alts-body {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 8px;
+}
+
+.bme-banned-alts-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.bme-banned-alts-section:not(:first-child) {
+    border-top: 1px solid #333;
+}
+
+.bme-banned-alts-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 15px 6px;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.bme-banned-alts-check-btn {
+    font-size: 13px;
+    font-weight: 500;
+    color: #aaa;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid #444;
+    background: #1e1e1e;
+    transition: 100ms;
+    user-select: none;
+}
+
+.bme-banned-alts-check-btn:hover {
+    background: #2a2a2a;
+    color: #fff;
+}
+
+.bme-banned-alts-check-btn--busy {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.bme-banned-alts-results {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 0 8px 4px;
+    min-height: 0;
+}
+
+.bme-banned-alts-results .bme-progress-track {
+    margin-top: 4px;
+    flex: 1;
+}
+
+.bme-banned-alts-progress-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px 6px;
+}
+
+.bme-banned-alts-progress-row .bme-progress-track {
+    flex: 1;
+}
+
+.bme-banned-alts-empty {
+    font-size: 13px;
+    color: #777;
+    padding: 2px 7px;
+    margin: 0;
+}
+
+.bme-banned-alt-item {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 6px 10px;
+    background: #151515;
+    border-radius: 4px;
+    border-left: 3px solid #7c1313;
+}
+
+.bme-banned-alt-name {
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bme-banned-alt-meta {
+    font-size: 12px;
+    color: #999;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

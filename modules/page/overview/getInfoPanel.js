@@ -252,37 +252,6 @@ function getBmInfoPanel(bm, bmId) {
     items.push(...getBmRustHoursElements(bm, settings.bmRustHoursColors))
     items.push(...getYourServersHoursElements(bm, settings.yourServersHoursColors))
     items.push(...getAimTrainingElements(bm, settings.aimTrainColors));
-    items.push(createSeparator());
-
-    const bmAltTitle = createHtmlElement("dt", "BM Banned Alts:");
-    const bmAltValue = createHtmlElement("dd", "");
-    const bmAltButton = createHtmlElement("a", "Click to check");
-    bmAltButton.style.cursor = "pointer";
-    bmAltValue.appendChild(bmAltButton);
-    bmAltButton.onclick = async () => {
-        const BMToken = localStorage.getItem("BME_BATTLEMETRICS_API_KEY");
-        if (!BMToken) { bmAltValue.innerText = "No API key"; return; }
-        try {
-            const results = await checkAltsWithProgress("BME_BM_ALTS", bmId, BMToken, bmAltValue);
-            renderAltCheckResults(bmAltValue, results);
-        } catch { bmAltValue.innerText = "Error"; }
-    };
-    items.push(bmAltTitle, bmAltValue);
-
-    const eacAltTitle = createHtmlElement("dt", "EAC Banned Alts:");
-    const eacAltValue = createHtmlElement("dd", "");
-    const eacAltButton = createHtmlElement("a", "Click to check");
-    eacAltButton.style.cursor = "pointer";
-    eacAltValue.appendChild(eacAltButton);
-    eacAltButton.onclick = async () => {
-        const BMToken = localStorage.getItem("BME_BATTLEMETRICS_API_KEY");
-        if (!BMToken) { eacAltValue.innerText = "No API key"; return; }
-        try {
-            const results = await checkAltsWithProgress("BME_EAC_ALTS", bmId, BMToken, eacAltValue);
-            renderAltCheckResults(eacAltValue, results);
-        } catch { eacAltValue.innerText = "Error"; }
-    };
-    items.push(eacAltTitle, eacAltValue);
 
     for (const item of items) list.appendChild(item);
 
@@ -467,7 +436,7 @@ function getBmInfoTimeString(timestamp) {
     return NaN;
 }
 
-function checkAltsWithProgress(type, bmId, BMToken, valueEl) {
+export function checkAltsWithProgress(type, bmId, BMToken, valueEl, extraFields = {}) {
     const requestId = Math.floor(Math.random() * 1000000);
     const fullType = `${type}_${requestId}`;
 
@@ -513,11 +482,11 @@ function checkAltsWithProgress(type, bmId, BMToken, valueEl) {
         }
 
         chrome.runtime.onMessage.addListener(handler);
-        chrome.runtime.sendMessage({ type: fullType, subject: bmId, apiKey: BMToken });
+        chrome.runtime.sendMessage({ type: fullType, subject: bmId, apiKey: BMToken, ...extraFields });
     });
 }
 
-function renderAltCheckResults(element, results) {
+export function renderAltCheckResults(element, results) {
     if (!results || !Array.isArray(results)) {
         element.innerText = "Error";
         return;
